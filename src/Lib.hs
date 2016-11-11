@@ -16,6 +16,10 @@ Notes:
 - Strings are the obvious type, Text is the more commonly recommended, and Bytestring is what http-conduit returns.
 -
 - Mention that I'd also potentially like to make a servant version, but that I would have to learn more about type-level programming.
+-
+- Have ways to change the return string format as well as whether it is given as a string type or a more native format.
+-   Should it just give it as a string and the user parses it into a native type/format or should I include things to automatically convert it?
+-   Maybe I'll put it in eventually, but for now just return as string.
 
 todo:
 - Create consumer API - in process
@@ -23,6 +27,7 @@ todo:
 - Add authentication and API token abilities.
 - (Look at other SODA libraries to get ideas)
 - Have it be able receive different files types using the right types.
+- Eventually take advantage of http manager and connections.
 
  -}
 
@@ -31,8 +36,17 @@ type Request = String
 type Query = String
 type Domain = String
 type DatasetID = String
--- Might want to make this a simpler type since the formats are currently limited.
-type ResponseFormat = String
+
+-- Have this affect the mime type?
+data ResponseFormat = CSV | GeoJSON | JSON | RDFXML | XML
+
+-- Should it maybe put the dot in front? Perhaps make it part of a typeclass instead?
+formatToUrl :: ResponseFormat -> String
+formatToUrl CSV = "csv"
+formatToUrl GeoJSON = "geojson"
+formatToUrl JSON = "json"
+formatToUrl RDFXML = "rdf"
+formatToUrl XML = "xml"
 
 runRawRequest :: Request -> IO L8.ByteString
 runRawRequest request = do
@@ -44,10 +58,7 @@ runRequest :: Domain -> DatasetID -> ResponseFormat -> Query -> IO L8.ByteString
 runRequest domain datasetID format query= runRawRequest $ urlBuilder domain datasetID format query
 
 urlBuilder :: Domain -> DatasetID -> ResponseFormat -> Query -> Request
-urlBuilder domain datasetID format query = "https://" ++ domain ++ "/resource/" ++ datasetID ++ format ++ query
-
-testRequest :: Request
-testRequest = "https://" ++ testDomain ++ "/resource/" ++ testDataset ++ testResponse ++ testQuery
+urlBuilder domain datasetID format query = "https://" ++ domain ++ "/resource/" ++ datasetID ++ "." ++ (formatToUrl format) ++ query
 
 someFunc :: IO ()
 someFunc = do
@@ -68,7 +79,7 @@ testDataset :: DatasetID
 testDataset = "i7dt-eubi"
 
 testResponse :: ResponseFormat
-testResponse = ".json"
+testResponse = CSV
 
 testQuery :: Query
 testQuery = "?name=Drain,%20Gershwin%20A."
