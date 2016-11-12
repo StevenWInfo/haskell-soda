@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lib
+module Soda
     ( someFunc
     ) where
 
@@ -22,8 +22,6 @@ Notes:
 - Have ways to change the return string format as well as whether it is given as a string type or a more native format.
 -   Should it just give it as a string and the user parses it into a native type/format or should I include things to automatically convert it?
 -   Maybe I'll put it in eventually, but for now just return as string.
-
-- I realized something obvious: The logic for the language is the same as for a language/parser except the lexical analysis done already.
 
 todo:
 - Create consumer API - in process
