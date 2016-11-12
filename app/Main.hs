@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Soda
 
 main :: IO ()
 main = someFunc
