@@ -14,6 +14,8 @@ Elements which make SoQL and other parts of identifying what data you want easie
 - I'll have to think through how subqueries will be done. Might be a little complicated.
 -
 - The logic seems very similar to a language. Abstract syntax tree, etc. I suppose that seems kind of obvious because it's the Socrata Query *Language* which is based on SQL, another language.
+-
+- I need to forget about abstracting it into space and just get something workable done. Then I can worry about abstracting things out.
 
 query -> queryinfo
 
@@ -96,7 +98,7 @@ data QueryMeta = QueryMeta { whereExists :: Bool
 
 -- |Need a better name. Also don't export the constructor.
 -- |Also, maybe have a way to have "default values" since I'm usually only changing one thing at a time.
--- This feels so much like a monad, yet I'm not exactly sure how to make the initial context depend on the value. I don't want a return to violate the dependency. Maybe the solution is to bring the metadata up to the type level.
+-- This feels so much like a monad, yet I'm not exactly sure how to make the initial context depend on the value. I don't want a return to violate the dependency. Maybe the solution is to bring the metadata up to the type level. (Maybe the Bind typeclass I stumbled across).
 -- |Just makes finding errors more efficient. Sort of like memoization or caching.
 data QueryInfo = QueryInfo Query QueryMeta
 
@@ -112,18 +114,30 @@ combineQ (QueryInfo q1 qi1) (QueryInfo q2 qi2) = case combineQI qi1 qi2 of
                                                      Right qi -> Right QueryInfo (Combine q1 q2) qi
                                                      Left qe -> Left qe
 
+--------- Currently working on.
+-- Need to get checkers for combineQI working with combineQI in a reasonable way.
+
 -- There has got to be a simpler way of writing this (that's still extensible).
+-- If I get ambitious enough later, maybe try replacing Either with These from the "these" package in order to gather all of the errors.
+-- |If there are multiple errors, this currently only returns the first one it finds. Eventually I'd like it to return all errors.
 combineQI :: QueryMeta -> QueryMeta -> Either QueryError QueryMeta
 combineQI qm1 qm2 = { whereExists = ( whereCheck qm1 qm2 ) }
-    where whereCheck { whereExists = we1 } { whereExists = we2 } = we1 && we2
+
+whereCheck :: QueryMeta -> QueryMeta -> Either QueryError Bool
+whereCheck { whereExists = we1 } { whereExists = we2 } 
+    | we1 && we2 = Left multipleWhere
 
 -- Reader or writer monad to capture implementation information.
 -- WriterT QueryMeta Either QueryError Query
 -- Although, maybe not. The problem is creating the WriterT with the restrictions on QueryMeta.
 
 -- This might be a monoid? Also, make a show instance for it.
+-- If we ever use the These type from the "these" package, then this should be a record instead. I actually wanted to originally implement it that way.
+-- Also, can encode more information if we use the These type like how many where clauses were used.
 -- |Should match up with QueryMeta since QueryMeta just makes finding errors more efficient.
-data QueryError = { numberWhere :: Int }
+data QueryError = multipleWhere
+
+----------
 
 -- SoSQL functions
 -- TODO
