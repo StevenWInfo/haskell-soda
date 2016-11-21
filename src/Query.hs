@@ -107,35 +107,30 @@ data QueryInfo = QueryInfo Query QueryMeta
 defaultQueryMeta = QueryMeta { whereExists = False }
 
 queryInfo :: Query -> QueryInfo
-queryInfo (Query Where pred) = QueryInfo (Query Where pred) (defaultQueryMeta { whereExists = True })
-queryInfo query = QueryInfo Query defaultQueryMeta
+queryInfo (Where pred) = QueryInfo (Where pred) (defaultQueryMeta { whereExists = True })
+queryInfo query = QueryInfo query defaultQueryMeta
 
 -- Need to figure out better naming
 combineQ :: QueryInfo -> QueryInfo -> Either QueryError QueryInfo
 combineQ (QueryInfo q1 qi1) (QueryInfo q2 qi2) = case combineQI qi1 qi2 of
-                                                     Right qi -> Right QueryInfo (Combine q1 q2) qi
+                                                     Right qi -> Right (QueryInfo (Combine q1 q2) qi)
                                                      Left qe -> Left qe
-
---------- Currently working on.
--- Need to get checkers for combineQI working with combineQI in a reasonable way.
 
 -- There has got to be a simpler way of writing this (that's still extensible).
 -- |If there are multiple errors, this currently only returns the first one it finds. Eventually I'd like it to return all errors.
 combineQI :: QueryMeta -> QueryMeta -> Either QueryError QueryMeta
 combineQI qm1 qm2 = do
     isWhere <- whereCheck qm1 qm2
-    return (QueryMeta { whereExists = ( whereCheck qm1 qm2 ) })
+    return (QueryMeta { whereExists = isWhere })
 
 whereCheck :: QueryMeta -> QueryMeta -> Either QueryError Bool
-whereCheck { whereExists = we1 } { whereExists = we2 } 
-    | we1 && we2 = Left multipleWhere
+whereCheck (QueryMeta { whereExists = we1 }) (QueryMeta { whereExists = we2 })
+    | we1 && we2 = Left MultipleWhere
     | otherwise  = Right (we1 || we2)
 
 -- This might be a monoid? Also, make a show instance for it.
 -- |Should match up with QueryMeta since QueryMeta just makes finding errors more efficient.
-data QueryError = multipleWhere
-
-----------
+data QueryError = MultipleWhere
 
 -- SoSQL functions
 -- TODO
