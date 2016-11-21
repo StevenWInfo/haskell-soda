@@ -19,6 +19,8 @@ Elements which make SoQL and other parts of identifying what data you want easie
 
 query -> queryinfo
 
+- The "these" package would allow me to give more information about errors, but might be more inefficient because it wouldn't short-circuit computation.
+
 TODO:
 - Run hlint and see how much is unnecessary.
 - Figure out better names.
@@ -102,11 +104,11 @@ data QueryMeta = QueryMeta { whereExists :: Bool
 -- |Just makes finding errors more efficient. Sort of like memoization or caching.
 data QueryInfo = QueryInfo Query QueryMeta
 
-defaultQueryInfo = { whereExists = False }
+defaultQueryMeta = QueryMeta { whereExists = False }
 
 queryInfo :: Query -> QueryInfo
-queryInfo (Query Where pred) = QueryInfo (Query Where pred) (QueryMeta (defaultQueryInfo { whereExists = True }))
-queryInfo query = QueryInfo Query QueryMeta
+queryInfo (Query Where pred) = QueryInfo (Query Where pred) (defaultQueryMeta { whereExists = True })
+queryInfo query = QueryInfo Query defaultQueryMeta
 
 -- Need to figure out better naming
 combineQ :: QueryInfo -> QueryInfo -> Either QueryError QueryInfo
@@ -118,22 +120,18 @@ combineQ (QueryInfo q1 qi1) (QueryInfo q2 qi2) = case combineQI qi1 qi2 of
 -- Need to get checkers for combineQI working with combineQI in a reasonable way.
 
 -- There has got to be a simpler way of writing this (that's still extensible).
--- If I get ambitious enough later, maybe try replacing Either with These from the "these" package in order to gather all of the errors.
 -- |If there are multiple errors, this currently only returns the first one it finds. Eventually I'd like it to return all errors.
 combineQI :: QueryMeta -> QueryMeta -> Either QueryError QueryMeta
-combineQI qm1 qm2 = { whereExists = ( whereCheck qm1 qm2 ) }
+combineQI qm1 qm2 = do
+    isWhere <- whereCheck qm1 qm2
+    return (QueryMeta { whereExists = ( whereCheck qm1 qm2 ) })
 
 whereCheck :: QueryMeta -> QueryMeta -> Either QueryError Bool
 whereCheck { whereExists = we1 } { whereExists = we2 } 
     | we1 && we2 = Left multipleWhere
-
--- Reader or writer monad to capture implementation information.
--- WriterT QueryMeta Either QueryError Query
--- Although, maybe not. The problem is creating the WriterT with the restrictions on QueryMeta.
+    | otherwise  = Right (we1 || we2)
 
 -- This might be a monoid? Also, make a show instance for it.
--- If we ever use the These type from the "these" package, then this should be a record instead. I actually wanted to originally implement it that way.
--- Also, can encode more information if we use the These type like how many where clauses were used.
 -- |Should match up with QueryMeta since QueryMeta just makes finding errors more efficient.
 data QueryError = multipleWhere
 
