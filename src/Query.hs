@@ -54,7 +54,9 @@ Text
  -}
 --
 
+-- Perhaps need to restrict this further whereever this is used to exclude things like whitespace. Not sure if should do at value or type level.
 type Column = String
+
 -- Could change content in the future because we can enforce it to follow the given datatypes
 type Content = String
 
@@ -73,23 +75,32 @@ data Order = Order Column Sorting
 
 data Filter = Filter Column Content
 
+-- Selects are a little trickier than just strings. Have to be able to mix with certain functions and things as well as aliases.
+type Select = String
+
+type Where = String
+
+type Having
+
 -- Possibly be more specific in the types like "Column" or something.
 -- Need to account for negative limit, which doesn't make sense, somehow.
 -- Don't export constructor
 -- Either have maybes for all of these or have an empty indicator for all types.
 -- Custom datatypes for some of these
 data Query = Query { filters   :: [Filter] -- Type with columns and contents
-                   , selects   :: [String]
-                   , wheres   :: String -- Is the lowercase where allowed?
+                   , selects   :: [Select]
+                   , wheres   :: Where -- Is the lowercase where allowed?
                    , order    :: Order
-                   , group    :: String
-                   , having   :: String -- Expand later?
+                   , group    :: [Column] -- Depends on the select clause.
+                   , having   :: Having -- Depends on the group clause. Similar to where clause.
                    , limit    :: NonNegative
                    , offset   :: NonNegative
                    , search   :: String -- |$q parameter
                    , subquery :: Query
                    , bom      :: Bool
                    }
+
+-- defaultQuery = 
 
 {- Going to get rid of but keeping it around to get useful stuff out of it.
 data Query = Filter Column Content
