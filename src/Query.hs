@@ -10,11 +10,15 @@ Elements which make SoQL and other parts of identifying what data you want easie
 {- Notes:
 
 - Need to create smart constructors.
--
+
 - I'll have to think through how subqueries will be done. Might be a little complicated.
--
+
 - The logic seems very similar to a language. Abstract syntax tree, etc. I suppose that seems kind of obvious because it's the Socrata Query *Language* which is based on SQL, another language.
--
+    - I should actually create a grammar. Not just for queries but internally for the clauses too.
+    - Although, the order of the SoQL actually doesn't matter.
+    - The order inside where clauses matter though.
+    - Also, the order in the $query field matters.
+
 - I need to forget about abstracting it into space and just get something workable done. Then I can worry about abstracting things out.
 
 query -> queryinfo
@@ -78,8 +82,8 @@ data Query = Filter Column Content
     | Having String 
     | Limit NonNegative 
     | Offset NonNegative 
-    | Q String 
-    | SubQuery Query 
+    | Search String -- |$q parameter
+    | SubQuery Query -- |$query parameter
     | Bom Bool
     | Combine Query Query
 
