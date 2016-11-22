@@ -69,22 +69,24 @@ type NonNegative = Int
 
 data Sorting = ASC | DESC
 
+data Order = Order Column Sorting
+
 -- Possibly be more specific in the types like "Column" or something.
 -- Need to account for negative limit, which doesn't make sense, somehow.
 -- Don't export constructor
 -- Either have maybes for all of these or have an empty indicator for all types.
 -- Custom datatypes for some of these
-data Query = Query { filter :: [String] -- Type with columns and contents
-                   , select :: [String]
-                   , whereC :: String -- Is the lowercase where allowed?
-                   , order :: String
-                   , group :: String
-                   , having :: String -- Expand later?
-                   , limit :: NonNegative
-                   , offset :: NonNegative
-                   , search :: String -- |$q parameter
+data Query = Query { filter   :: [String] -- Type with columns and contents
+                   , select   :: [String]
+                   , whereC   :: String -- Is the lowercase where allowed?
+                   , order    :: Order
+                   , group    :: String
+                   , having   :: String -- Expand later?
+                   , limit    :: NonNegative
+                   , offset   :: NonNegative
+                   , search   :: String -- |$q parameter
                    , subquery :: Query
-                   , bom :: Bool
+                   , bom      :: Bool
                    }
 
 {- Going to get rid of but keeping it around to get useful stuff out of it.
