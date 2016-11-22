@@ -71,14 +71,16 @@ data Sorting = ASC | DESC
 
 data Order = Order Column Sorting
 
+data Filter = Filter Column Content
+
 -- Possibly be more specific in the types like "Column" or something.
 -- Need to account for negative limit, which doesn't make sense, somehow.
 -- Don't export constructor
 -- Either have maybes for all of these or have an empty indicator for all types.
 -- Custom datatypes for some of these
-data Query = Query { filter   :: [String] -- Type with columns and contents
-                   , select   :: [String]
-                   , whereC   :: String -- Is the lowercase where allowed?
+data Query = Query { filters   :: [Filter] -- Type with columns and contents
+                   , selects   :: [String]
+                   , wheres   :: String -- Is the lowercase where allowed?
                    , order    :: Order
                    , group    :: String
                    , having   :: String -- Expand later?
