@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GADTs #-}
 module Query
     ( 
     ) where
@@ -34,8 +35,32 @@ TODO:
 -- Numbers, Doubles, and Moneys are numeric types that can interact. Might need to make an instance of numeric or a custom typeclass if I don't want them interacting with other types.
 -- Do I want these to be type synonyms or newtypes?
 
+data Expr a where
+    Checkbox          :: Maybe Bool -> Expr (Maybe Bool)
+    Double            :: Double -> Expr Double
+    FloatingTimestamp :: String -> Expr String
+    Line              :: String -> Expr String
+    Location          :: String -> Expr String
+    Money             :: Int -> Expr Int
+    MultiLine         :: String -> Expr String
+    MultiPoint        :: String -> Expr String
+    MultiPolygon      :: String -> Expr String
+    Number            :: Double -> Expr Double -- Look at the numbers package.
+    Point             :: String -> Expr String
+    Polygon           :: String -> Expr String
+    Text              :: String -> Expr String
+
 -- Maybe should actually use ternary logic instead?
-type Checkbox = Maybe Bool
+-- type Checkbox = Maybe Bool
+
+{-
+data Q
+
+data T a = TI Int | TS String
+
+test :: T Q
+test = TI 5
+-}
 
 {-
 Checkbox
@@ -80,42 +105,38 @@ type Select = String
 
 type Where = String
 
-type Having
+type Having = String
 
 -- Possibly be more specific in the types like "Column" or something.
 -- Need to account for negative limit, which doesn't make sense, somehow.
 -- Don't export constructor
 -- Either have maybes for all of these or have an empty indicator for all types.
 -- Custom datatypes for some of these
-data Query = Query { filters   :: [Filter] -- Type with columns and contents
-                   , selects   :: [Select]
+data Query = Query { filters  :: [Filter] -- Type with columns and contents
+                   , selects  :: [Select]
                    , wheres   :: Where -- Is the lowercase where allowed?
-                   , order    :: Order
+                   , order    :: Maybe Order
                    , group    :: [Column] -- Depends on the select clause.
                    , having   :: Having -- Depends on the group clause. Similar to where clause.
                    , limit    :: NonNegative
                    , offset   :: NonNegative
                    , search   :: String -- |$q parameter
-                   , subquery :: Query
+                   , subquery :: Maybe Query
                    , bom      :: Bool
                    }
 
--- defaultQuery = 
-
-{- Going to get rid of but keeping it around to get useful stuff out of it.
-data Query = Filter Column Content
-    | Select Column 
-    | Where Predicate 
-    | Order Column (Maybe Sorting)
-    | Group String 
-    | Having String 
-    | Limit NonNegative 
-    | Offset NonNegative 
-    | Search String -- |$q parameter
-    | SubQuery Query -- |$query parameter
-    | Bom Bool
-    | Combine Query Query
--}
+defaultQuery = Query { filters  = []
+                     , selects  = []
+                     , wheres   = ""
+                     , order    = Nothing
+                     , group    = []
+                     , having   = ""
+                     , limit    = 1000
+                     , offset   = 0
+                     , search   = ""
+                     , subquery = Nothing
+                     , bom      = False
+                     }
 
 {-
 limit :: Int -> Maybe Query
