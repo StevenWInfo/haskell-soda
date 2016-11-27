@@ -5,6 +5,9 @@ module Query
     ( 
     ) where
 
+import Data.Time.Calendar
+import Data.Time.Clock
+
 {-|
 Elements which make SoQL and other parts of identifying what data you want easier.
  -}
@@ -23,7 +26,7 @@ Elements which make SoQL and other parts of identifying what data you want easie
 
 - I need to forget about abstracting it into space and just get something workable done. Then I can worry about abstracting things out.
 
-- The "these" package would allow me to give more information about errors, but might be more inefficient because it wouldn't short-circuit computation.
+- Could use simpler types like tuples for points, but I think that this is better. Not sure though.
 
 TODO:
 - Run hlint and see how much is unnecessary.
@@ -40,16 +43,16 @@ TODO:
 data Expr datatype where
     Checkbox          :: Checkbox -> Expr Checkbox
     Double            :: Double -> Expr Double
-    FloatingTimestamp :: String -> Expr String
-    Line              :: String -> Expr String
-    Location          :: String -> Expr String
-    Money             :: Int -> Expr Int
-    MultiLine         :: String -> Expr String
-    MultiPoint        :: String -> Expr String
-    MultiPolygon      :: String -> Expr String
-    Number            :: Double -> Expr Double -- Look at the numbers package.
-    Point             :: String -> Expr String
-    Polygon           :: String -> Expr String
+    FloatingTimestamp :: FloatingTimestamp -> Expr FloatingTimestamp
+    LineE              :: String -> Expr String
+    LocationE          :: String -> Expr String
+    MoneyE             :: Money -> Expr Money
+    MultiLineE         :: String -> Expr String
+    MultiPointE        :: String -> Expr String
+    MultiPolygonE      :: String -> Expr String
+    NumberE            :: Number -> Expr Number -- Look at the numbers package.
+    PointE             :: String -> Expr String
+    PolygonE           :: String -> Expr String
     Text              :: String -> Expr String
     --Sum               :: Column (Expr Int)
 
@@ -65,17 +68,50 @@ instance SodaClass (Maybe Bool)
 
 -- Maybe make these be not empty.
 instance SodaClass Double
-data FloatingTimestampT
-data LineT
-data LocationT
-data MoneyT
-data MultiLineT
+
+type FloatingTimestamp = UTCTime
+instance SodaClass FloatingTimestamp
+
+-- The only difference in the data structure of Line and Multipoint is that Line has to have at least two positions/points in them
+newtype Line = Line { getLine :: [Point] } deriving (Show)
+instance SodaClass Line
+
+-- Possibly restrict the values used for these.
+data USAddress = USAddress { address :: String
+                           , city :: String
+                           , state :: String
+                           , zip :: String
+                           }
+
+-- Should really require one of these not to be Nothing, but can put that restriction in the smart constructor.
+-- Use record syntax?
+data Location = Location (Maybe Point) (Maybe USAddress)
+instance SodaClass Location
+
+-- Not sure if money is just fixed precision or more complicated. Round until I find a way to use a better type.
+newtype Money = Money { getMoney :: Double } deriving (Show)
+instance SodaClass Money
+
+type MultiLine = [Line]
+instance SodaClass MultiLine
+
 data MultiPointT
 data MultiPolygonT
-data NumberT
-data PointT
+
+-- Eventually replace with a better type.
+newtype Number = Number { getNumber :: Double } deriving (Show)
+instance SodaClass Number
+
+-- I'm actually not completely sure of the precision required here.
+-- Perhaps rename to Position and then have point as a type synonym (since I think that is semantically more correct).
+data Point = Point { longitude :: Double
+                   , latitude  :: Double
+                   } deriving (Show)
+
 data PolygonT
-data TextT
+
+type Text = String
+instance SodaClass Text
 
 -- |Existential type representing one of the soda data types.
 data SodaType where
