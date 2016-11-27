@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Query
     ( 
     ) where
@@ -28,6 +29,7 @@ TODO:
 - Run hlint and see how much is unnecessary.
 - Figure out better names.
 - Clean up and make things like naming more consistant.
+- Have some way to run raw queries and turn complete or partial EDSL queries into raw queries.
 
  -}
 
@@ -35,8 +37,8 @@ TODO:
 -- Numbers, Doubles, and Moneys are numeric types that can interact. Might need to make an instance of numeric or a custom typeclass if I don't want them interacting with other types.
 -- Do I want these to be type synonyms or newtypes?
 
-data Expr a where
-    Checkbox          :: Maybe Bool -> Expr (Maybe Bool)
+data Expr datatype where
+    Checkbox          :: Checkbox -> Expr Checkbox
     Double            :: Double -> Expr Double
     FloatingTimestamp :: String -> Expr String
     Line              :: String -> Expr String
@@ -49,38 +51,43 @@ data Expr a where
     Point             :: String -> Expr String
     Polygon           :: String -> Expr String
     Text              :: String -> Expr String
+    --Sum               :: Column (Expr Int)
 
--- Maybe should actually use ternary logic instead?
--- type Checkbox = Maybe Bool
+--data Func = Sum (Column (Expr Int)) -- ?
+    -- | StartsWith (Column (Expr
 
-{-
-data Q
+class SodaClass a
 
-data T a = TI Int | TS String
+-- Some of these might have conflicting names.
+-- |Corresponds to ternary valued values with Nothing as null.
+type Checkbox = Maybe Bool
+instance SodaClass (Maybe Bool)
 
-test :: T Q
-test = TI 5
--}
+-- Maybe make these be not empty.
+instance SodaClass Double
+data FloatingTimestampT
+data LineT
+data LocationT
+data MoneyT
+data MultiLineT
+data MultiPointT
+data MultiPolygonT
+data NumberT
+data PointT
+data PolygonT
+data TextT
 
-{-
-Checkbox
-Double
-FloatingTimestamp
-Line
-Location
-Money
-MultiLine
-MultiPoint
-MultiPolygon
-Number
-Point
-Polygon
-Text
- -}
---
+-- |Existential type representing one of the soda data types.
+data SodaType where
+    MkSodaType :: SodaClass a => a -> SodaType
+
+data SodaTerm datatype = Col (Column datatype) | Ex (Expr datatype)
+
+-- Need to: Make a typeclass for possibly all soda functions (or at least all sets of types), then possibly also one that is for all soda types to make Column existentially quantified.
 
 -- Perhaps need to restrict this further whereever this is used to exclude things like whitespace. Not sure if should do at value or type level.
-type Column = String
+data Column datatype where
+    Column :: SodaClass sodatype => String -> sodatype -> Column sodatype
 
 -- Could change content in the future because we can enforce it to follow the given datatypes
 type Content = String
@@ -96,9 +103,10 @@ type NonNegative = Int
 
 data Sorting = ASC | DESC
 
-data Order = Order Column Sorting
+-- Possibly confusing with Ord class.
+data Order = Order (Column SodaType) Sorting
 
-data Filter = Filter Column Content
+data Filter = Filter (Column SodaType) Content
 
 -- Selects are a little trickier than just strings. Have to be able to mix with certain functions and things as well as aliases.
 type Select = String
@@ -107,29 +115,34 @@ type Where = String
 
 type Having = String
 
+-- Possibly confusion with the mathematical concept of a group
+data GroupElem where
+    Groupify :: SodaClass sodatype => sodatype -> GroupElem
+
 -- Possibly be more specific in the types like "Column" or something.
 -- Need to account for negative limit, which doesn't make sense, somehow.
 -- Don't export constructor
 -- Either have maybes for all of these or have an empty indicator for all types.
 -- Custom datatypes for some of these
-data Query = Query { filters  :: [Filter] -- Type with columns and contents
-                   , selects  :: [Select]
-                   , wheres   :: Where -- Is the lowercase where allowed?
-                   , order    :: Maybe Order
-                   , group    :: [Column] -- Depends on the select clause.
-                   , having   :: Having -- Depends on the group clause. Similar to where clause.
-                   , limit    :: NonNegative
-                   , offset   :: NonNegative
-                   , search   :: String -- |$q parameter
-                   , subquery :: Maybe Query
-                   , bom      :: Bool
-                   }
+data Query = Query {filters  :: [Filter] -- Type with columns and contents
+        , selects  :: [Select]
+        , wheres   :: Where -- Is the lowercase where allowed?
+        , order    :: Maybe Order
+        , group    :: [GroupElem] -- Depends on the select clause. Also, might need an existential type.
+        , having   :: Having -- Depends on the group clause. Similar to where clause.
+        , limit    :: NonNegative
+        , offset   :: NonNegative
+        , search   :: String -- |$q parameter
+        , subquery :: Maybe Query
+        , bom      :: Bool
+    }
 
+defaultQuery :: Query
 defaultQuery = Query { filters  = []
                      , selects  = []
                      , wheres   = ""
                      , order    = Nothing
-                     , group    = []
+                     , group    = [] :: [GroupElem]
                      , having   = ""
                      , limit    = 1000
                      , offset   = 0
