@@ -36,6 +36,7 @@ import Query
 - Eventually take advantage of http manager and connections.
 - Handle metadata and other data
 - Handle error responses
+- Have some way to run raw queries and turn complete or partial EDSL queries into raw queries.
 
  -}
 

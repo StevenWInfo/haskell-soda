@@ -12,7 +12,7 @@ import Data.Time.Clock
 Elements which make SoQL and other parts of identifying what data you want easier.
  -}
 
-{- Notes:
+{- #Notes:
 
 - Need to create smart constructors.
 
@@ -28,11 +28,10 @@ Elements which make SoQL and other parts of identifying what data you want easie
 
 - Could use simpler types like tuples for points, but I think that this is better. Not sure though.
 
-TODO:
+##TODO:
 - Run hlint and see how much is unnecessary.
 - Figure out better names.
 - Clean up and make things like naming more consistant.
-- Have some way to run raw queries and turn complete or partial EDSL queries into raw queries.
 
  -}
 
@@ -42,19 +41,19 @@ TODO:
 
 data Expr datatype where
     Checkbox          :: Checkbox -> Expr Checkbox
+    MoneyE            :: Money -> Expr Money
     Double            :: Double -> Expr Double
+    NumberE           :: Number -> Expr Number
+    Text              :: Text -> Expr Text
     FloatingTimestamp :: FloatingTimestamp -> Expr FloatingTimestamp
-    LineE              :: String -> Expr String
-    LocationE          :: String -> Expr String
-    MoneyE             :: Money -> Expr Money
-    MultiLineE         :: String -> Expr String
-    MultiPointE        :: String -> Expr String
-    MultiPolygonE      :: String -> Expr String
-    NumberE            :: Number -> Expr Number -- Look at the numbers package.
-    PointE             :: String -> Expr String
-    PolygonE           :: String -> Expr String
-    Text              :: String -> Expr String
-    --Sum               :: Column (Expr Int)
+    PointE            :: Point -> Expr Point
+    MultiPointE       :: MultiPoint -> Expr MultiPoint
+    LocationE         :: Location -> Expr Location
+    LineE             :: Line -> Expr Line
+    MultiLineE        :: MultiLine -> Expr MultiLine
+    PolygonE          :: Polygon -> Expr Polygon
+    MultiPolygonE     :: MultiPolygon -> Expr MultiPolygon
+    --Sum             :: Column (Expr Int)
 
 --data Func = Sum (Column (Expr Int)) -- ?
     -- | StartsWith (Column (Expr
@@ -66,41 +65,21 @@ class SodaClass a
 type Checkbox = Maybe Bool
 instance SodaClass (Maybe Bool)
 
--- Maybe make these be not empty.
-instance SodaClass Double
-
-type FloatingTimestamp = UTCTime
-instance SodaClass FloatingTimestamp
-
--- The only difference in the data structure of Line and Multipoint is that Line has to have at least two positions/points in them
-newtype Line = Line { getLine :: [Point] } deriving (Show)
-instance SodaClass Line
-
--- Possibly restrict the values used for these.
-data USAddress = USAddress { address :: String
-                           , city :: String
-                           , state :: String
-                           , zip :: String
-                           }
-
--- Should really require one of these not to be Nothing, but can put that restriction in the smart constructor.
--- Use record syntax?
-data Location = Location (Maybe Point) (Maybe USAddress)
-instance SodaClass Location
-
 -- Not sure if money is just fixed precision or more complicated. Round until I find a way to use a better type.
 newtype Money = Money { getMoney :: Double } deriving (Show)
 instance SodaClass Money
 
-type MultiLine = [Line]
-instance SodaClass MultiLine
-
-data MultiPointT
-data MultiPolygonT
-
--- Eventually replace with a better type.
+-- Maybe make these be not empty.
+instance SodaClass Double
+--
+-- Eventually replace with a better type. Look at the numbers package
 newtype Number = Number { getNumber :: Double } deriving (Show)
 instance SodaClass Number
+
+type Text = String
+
+type FloatingTimestamp = UTCTime
+instance SodaClass FloatingTimestamp
 
 -- I'm actually not completely sure of the precision required here.
 -- Perhaps rename to Position and then have point as a type synonym (since I think that is semantically more correct).
@@ -108,10 +87,31 @@ data Point = Point { longitude :: Double
                    , latitude  :: Double
                    } deriving (Show)
 
-data PolygonT
+type MultiPoint = [Point]
+instance SodaClass MultiPoint
 
-type Text = String
-instance SodaClass Text
+-- Possibly restrict the values used for these.
+data USAddress = USAddress { address :: String
+                           , city    :: String
+                           , state   :: String
+                           , zip     :: String
+                           }
+
+-- Should really require one of these not to be Nothing, but can put that restriction in the smart constructor.
+-- Use record syntax?
+data Location = Location (Maybe Point) (Maybe USAddress)
+instance SodaClass Location
+                   
+-- The only difference in the data structure of Line and Multipoint is that Line has to have at least two positions/points in them
+newtype Line = Line { getLine :: [Point] } deriving (Show)
+instance SodaClass Line
+
+type MultiLine = [Line]
+instance SodaClass MultiLine
+
+type Polygon = [Point]
+
+type MultiPolygon = [Polygon]
 
 -- |Existential type representing one of the soda data types.
 data SodaType where
@@ -160,18 +160,18 @@ data GroupElem where
 -- Don't export constructor
 -- Either have maybes for all of these or have an empty indicator for all types.
 -- Custom datatypes for some of these
-data Query = Query {filters  :: [Filter] -- Type with columns and contents
-        , selects  :: [Select]
-        , wheres   :: Where -- Is the lowercase where allowed?
-        , order    :: Maybe Order
-        , group    :: [GroupElem] -- Depends on the select clause. Also, might need an existential type.
-        , having   :: Having -- Depends on the group clause. Similar to where clause.
-        , limit    :: NonNegative
-        , offset   :: NonNegative
-        , search   :: String -- |$q parameter
-        , subquery :: Maybe Query
-        , bom      :: Bool
-    }
+data Query = Query { filters  :: [Filter] -- Type with columns and contents
+                   , selects  :: [Select]
+                   , wheres   :: Where -- Is the lowercase where allowed?
+                   , order    :: Maybe Order
+                   , group    :: [GroupElem] -- Depends on the select clause. Also, might need an existential type.
+                   , having   :: Having -- Depends on the group clause. Similar to where clause.
+                   , limit    :: NonNegative
+                   , offset   :: NonNegative
+                   , search   :: String -- |$q parameter
+                   , subquery :: Maybe Query
+                   , bom      :: Bool
+                   }
 
 defaultQuery :: Query
 defaultQuery = Query { filters  = []
