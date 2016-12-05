@@ -42,7 +42,7 @@ import Query
 
 type Endpoint = String
 type Request = String
-type TQuery = String
+type RawParameters = String
 type Domain = String
 type DatasetID = String
 
@@ -63,10 +63,11 @@ runRawRequest request = do
     response <- Http.httpLBS request
     return $ Http.getResponseBody response
 
-runRequest :: Domain -> DatasetID -> ResponseFormat -> TQuery -> IO L8.ByteString
+runRequest :: Domain -> DatasetID -> ResponseFormat -> RawParameters -> IO L8.ByteString
 runRequest domain datasetID format query= runRawRequest $ urlBuilder domain datasetID format query
 
-urlBuilder :: Domain -> DatasetID -> ResponseFormat -> TQuery -> Request
+-- Eventually change RawParameters to Query type
+urlBuilder :: Domain -> DatasetID -> ResponseFormat -> RawParameters -> Request
 urlBuilder domain datasetID format query = "https://" ++ domain ++ "/resource/" ++ datasetID ++ "." ++ (formatToUrl format) ++ query
 
 someFunc :: IO ()
@@ -77,6 +78,8 @@ someFunc = do
     --putStrLn $ "The status code was: " ++
     --           show (Http.getResponseStatusCode response)
     --print $ Http.getResponseHeader "Content-Type" response
+
+-- A Query to RawParameters function. Put it here or in Query file? If I put it in Query file then put RawParameters in that file?
 
 -- Test stuff
 -- I know I should just make actual tests, but I'm new to this so I'll do that later.
@@ -90,5 +93,5 @@ testDataset = "i7dt-eubi"
 testResponse :: ResponseFormat
 testResponse = CSV
 
-testQuery :: TQuery
+testQuery :: RawParameters
 testQuery = "?name=Drain,%20Gershwin%20A."

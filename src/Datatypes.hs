@@ -11,13 +11,14 @@ import Data.Time.Calendar
 import Data.Time.Clock
 
 {-|
+SODA datatypes
  -}
 
--- SODA datatypes. Might want to move to another file.
 -- Numbers, Doubles, and Moneys are numeric types that can interact. Might need to make an instance of numeric or a custom typeclass if I don't want them interacting with other types.
--- Do I want these to be type synonyms or newtypes?
 
 data Expr datatype where
+    SodaVal :: SodaClass a => a -> Expr a
+{-
     Checkbox          :: Checkbox -> Expr Checkbox
     MoneyE            :: Money -> Expr Money
     Double            :: Double -> Expr Double
@@ -31,6 +32,7 @@ data Expr datatype where
     MultiLineE        :: MultiLine -> Expr MultiLine
     PolygonE          :: Polygon -> Expr Polygon
     MultiPolygonE     :: MultiPolygon -> Expr MultiPolygon
+    -}
     --Sum             :: Column (Expr Int)
 
 --data Func = Sum (Column (Expr Int)) -- ?
