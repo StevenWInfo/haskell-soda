@@ -1,11 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Soda
-    ( someFunc
-    , ResponseFormat (..)
+    ( ResponseFormat (..)
     , formatToUrl
     , Domain
     , DatasetID
-    , ResponseFormat
     , RawParameters
     ) where
 
