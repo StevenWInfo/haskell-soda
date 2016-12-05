@@ -1,6 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Soda
     ( someFunc
+    , ResponseFormat (..)
+    , formatToUrl
+    , Domain
+    , DatasetID
+    , ResponseFormat
+    , RawParameters
     ) where
 
 import qualified Data.ByteString.Lazy.Char8 as L8
