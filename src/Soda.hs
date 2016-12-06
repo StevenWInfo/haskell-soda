@@ -5,6 +5,8 @@ module Soda
     , Domain
     , DatasetID
     , RawParameters
+    , urlBuilder
+    , runRequest
     ) where
 
 import qualified Data.ByteString.Lazy.Char8 as L8
@@ -73,29 +75,3 @@ runRequest domain datasetID format query= runRawRequest $ urlBuilder domain data
 -- Eventually change RawParameters to Query type
 urlBuilder :: Domain -> DatasetID -> ResponseFormat -> RawParameters -> Request
 urlBuilder domain datasetID format query = "https://" ++ domain ++ "/resource/" ++ datasetID ++ "." ++ (formatToUrl format) ++ query
-
-someFunc :: IO ()
-someFunc = do
-    response <- runRequest testDomain testDataset testResponse testQuery
-    L8.putStrLn response
-    -- I'll probably need to use the status code and response header later
-    --putStrLn $ "The status code was: " ++
-    --           show (Http.getResponseStatusCode response)
-    --print $ Http.getResponseHeader "Content-Type" response
-
--- A Query to RawParameters function. Put it here or in Query file? If I put it in Query file then put RawParameters in that file?
-
--- Test stuff
--- I know I should just make actual tests, but I'm new to this so I'll do that later.
-
-testDomain :: Domain
-testDomain = "open.whitehouse.gov"
-
-testDataset :: DatasetID
-testDataset = "i7dt-eubi"
-
-testResponse :: ResponseFormat
-testResponse = CSV
-
-testQuery :: RawParameters
-testQuery = "?name=Drain,%20Gershwin%20A."
