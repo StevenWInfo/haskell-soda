@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 import Test.Tasty
 import Test.Tasty.QuickCheck as QC
 import Test.Tasty.HUnit
@@ -6,13 +8,22 @@ import Soda
 
 import System.IO
 import qualified Data.ByteString.Lazy.Char8 as L8
+import Data.Text (Text)
+import Network.HTTP.Req
+import Control.Exception
 
 {-
  - Break this into multiple files soon.
  -}
 
+instance MonadHttp IO where
+  handleHttpException = throwIO
+
 main :: IO ()
-main = defaultMain tests
+main = do
+    lbs <- req GET (http "jsonplaceholder.typicode.com" /: "posts" /: "1") NoReqBody lbsResponse mempty
+    putStrLn (L8.unpack (responseBody lbs))
+    defaultMain tests
 
 tests = testGroup "Tests" [unitTests]
 
