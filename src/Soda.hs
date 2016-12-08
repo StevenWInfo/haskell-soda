@@ -10,7 +10,6 @@ module Soda
     ) where
 
 import qualified Data.ByteString.Lazy.Char8 as L8
-import qualified Network.HTTP.Simple as Http
 import System.IO
 import Data.Text (Text, pack, append)
 import Data.Monoid ((<>))
