@@ -16,25 +16,20 @@ import Control.Exception
  - Break this into multiple files soon.
  -}
 
-instance MonadHttp IO where
-  handleHttpException = throwIO
-
 main :: IO ()
 main = do
-    lbs <- req GET (http "jsonplaceholder.typicode.com" /: "posts" /: "1") NoReqBody lbsResponse mempty
-    putStrLn (L8.unpack (responseBody lbs))
     defaultMain tests
 
 tests = testGroup "Tests" [unitTests]
 
+-- The test that actually queries isn't a great test because it will fail if the dataset changes, but it's useful now.
 unitTests = testGroup "Unit tests"
-    [ testCase "urlBuilder smoke test" $
-        urlBuilder testDomain testDataset testFormat testQuery @?= "https://soda.demo.socrata.com/resource/4tka-6guv.json?$where=magnitude > 3.0"
-    -- This isn't a great test because it will fail if the dataset changes, but it's useful now.
-    , testCase "Try out executing query." $ do
+    [ testCase "Try out executing query." $ do
         contents <- readFile "tests/data/4tka-6guvMag3.json"
         response <- runRequest testDomain testDataset testFormat testQuery
-        L8.unpack response @?= (init contents) -- I haven't tested this yet.
+        response @?= (init contents) -- I haven't tested this yet.
+    --, testCase "urlBuilder smoke test" $
+        --urlBuilder testDomain testDataset testFormat testQuery @?= "https://soda.demo.socrata.com/resource/4tka-6guv.json?$where=magnitude > 3.0"
     ]
 
 {-
@@ -54,4 +49,4 @@ testFormat :: ResponseFormat
 testFormat = JSON
 
 testQuery :: RawParameters
-testQuery = "?$where=magnitude > 3.0"
+testQuery = [("$where", "magnitude > 3.0")]

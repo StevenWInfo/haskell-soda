@@ -11,6 +11,11 @@ module Soda
 
 import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Network.HTTP.Simple as Http
+import System.IO
+import Data.Text (Text, pack, append)
+import Data.Monoid ((<>))
+import Network.HTTP.Req
+import Control.Exception
 
 import Query
 
@@ -43,12 +48,13 @@ import Query
 - Handle metadata and other data
 - Handle error responses
 - Have some way to run raw queries and turn complete or partial EDSL queries into raw queries.
+- Not sure if I want to use String, Text, Bytestring, etc. Decide eventually.
 
  -}
 
 type Endpoint = String
 type Request = String
-type RawParameters = String
+type RawParameters = [(Text, String)]
 type Domain = String
 type DatasetID = String
 
@@ -63,15 +69,19 @@ formatToUrl JSON = "json"
 formatToUrl RDFXML = "rdf"
 formatToUrl XML = "xml"
 
-runRawRequest :: Request -> IO L8.ByteString
-runRawRequest request = do
-    request <- Http.parseRequest request
-    response <- Http.httpLBS request
-    return $ Http.getResponseBody response
+instance MonadHttp IO where
+  handleHttpException = throwIO
 
-runRequest :: Domain -> DatasetID -> ResponseFormat -> RawParameters -> IO L8.ByteString
-runRequest domain datasetID format query= runRawRequest $ urlBuilder domain datasetID format query
+runRequest :: Domain -> DatasetID -> ResponseFormat -> RawParameters -> IO String
+runRequest domain datasetID format query = do
+    let url = urlBuilder domain datasetID format
+    let param = foldr1 (<>) $ map (\(x,y) -> x =: y) query
+    response <- req GET url NoReqBody lbsResponse param
+    return (L8.unpack (responseBody response))
 
 -- Eventually change RawParameters to Query type
-urlBuilder :: Domain -> DatasetID -> ResponseFormat -> RawParameters -> Request
-urlBuilder domain datasetID format query = "https://" ++ domain ++ "/resource/" ++ datasetID ++ "." ++ (formatToUrl format) ++ query
+--urlBuilder :: Domain -> DatasetID -> ResponseFormat -> RawParameters -> Url Https
+urlBuilder domain datasetID format = https domain' /: "resource" /: (datasetID' `append` "." `append` format')
+    where domain' = pack domain
+          datasetID' = pack datasetID
+          format' = pack (formatToUrl format)
