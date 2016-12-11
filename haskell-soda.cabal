@@ -23,6 +23,7 @@ library
                      , time
                      , req
                      , text
+                     , aeson
   default-language:    Haskell2010
 
 test-suite haskell-soda-test
@@ -31,6 +32,7 @@ test-suite haskell-soda-test
   main-is:             TestSuite.hs
   build-depends:       tasty
                      --, Quickcheck
+                     --, HUnit
                      , tasty-hunit
                      , tasty-quickcheck
                      , base
@@ -39,7 +41,7 @@ test-suite haskell-soda-test
                      , req
                      , time
                      , text
-                     --, HUnit
+                     , aeson
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
