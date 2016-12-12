@@ -10,6 +10,8 @@ import System.IO
 import qualified Data.ByteString.Lazy.Char8 as L8
 import Data.Text (Text)
 import Network.HTTP.Req
+import qualified Network.HTTP.Client as Http
+import qualified Network.HTTP.Types.Status as Status
 import Control.Exception
 
 {-
@@ -18,8 +20,6 @@ import Control.Exception
 
 main :: IO ()
 main = do
-    response <- getStringResponse (tail testDomain) testDataset testFormat testQuery
-    --putStrLn . show $ responseStatusCode response
     defaultMain tests
 
 tests = testGroup "Tests" [unitTests]
@@ -34,11 +34,22 @@ unitTests = testGroup "Unit tests"
         response <- try (getStringResponse (tail testDomain) testDataset testFormat testQuery) :: IO (Either HttpException LbsResponse)
         case response of
             Left ex -> do 
-                          True @? "Threw exception"
-                          --(responseStatusCode ex) @?= 404
+                          True @? "Threw exception" -- unnecessary
             Right foo -> do
                             False @? "Should have thrown exception"
+    , testCase "Test 404 response" $ do
+        response <- tryJust selectNotFound (getStringResponse ((tail . tail) testDomain) testDataset testFormat testQuery) -- :: IO (Either HttpException LbsResponse)
+        case response of
+            Left code -> do 
+                            code @?= Status.status404
+                            --putStrLn (code ++ " Foobar")
+            Right _ -> do
+                            False @? "Should have thrown exception"
     ]
+    where
+        selectNotFound :: HttpException -> Maybe Status.Status
+        selectNotFound (VanillaHttpException (Http.HttpExceptionRequest _ (Http.StatusCodeException (rec) _))) = Just (Http.responseStatus rec)
+        selectNotFound _ = Nothing
 
 {-
     -- I'll probably need to use the status code and response header later

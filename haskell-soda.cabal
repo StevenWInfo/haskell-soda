@@ -23,7 +23,7 @@ library
                      , time
                      , req
                      , text
-                     , aeson
+                     --, aeson
   default-language:    Haskell2010
 
 test-suite haskell-soda-test
@@ -41,7 +41,9 @@ test-suite haskell-soda-test
                      , req
                      , time
                      , text
-                     , aeson
+                     --, aeson
+                     , http-client
+                     , http-types
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
