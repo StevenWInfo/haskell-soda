@@ -40,8 +40,8 @@ data SodaTerm datatype = Col (Column datatype) | Ex (Expr datatype)
 -- Need to: Make a typeclass for possibly all soda functions (or at least all sets of types), then possibly also one that is for all soda types to make Column existentially quantified.
 
 -- Perhaps need to restrict this further whereever this is used to exclude things like whitespace. Not sure if should do at value or type level.
-data Column datatype where
-    Column :: SodaClass sodatype => String -> sodatype -> Column sodatype
+data Column sodatype where
+    Column :: SodaClass sodatype => String -> Column sodatype
 
 -- Could change content in the future because we can enforce it to follow the given datatypes
 type Content = String
@@ -60,7 +60,9 @@ data Sorting = ASC | DESC
 -- Possibly confusing with Ord class.
 data Order = Order (Column SodaType) Sorting
 
-data Filter = Filter (Column SodaType) Content
+-- |A SODA simple filter as an existential type (to fit into the query type cleanly).
+data Filter where
+    Filter :: SodaClass sodatype => (Column sodatype) -> (Expr sodatype) -> Filter
 
 -- Selects are a little trickier than just strings. Have to be able to mix with certain functions and things as well as aliases.
 type Select = String
@@ -104,6 +106,21 @@ defaultQuery = Query { filters  = []
                      , subquery = Nothing
                      , bom      = False
                      }
+
+{-
+queryToUrlParameters :: Query -> String
+queryToUrlParameters query = filters'
+    where filters' = filtersToUrlParameters (filters query)
+
+-- It's weird to take the head as the initial value with foldr, but order doesn't matter and I'm guessing this is more efficient.
+filtersToUrlParameters :: [Filter] -> String
+filtersToUrlParameters [] = ""
+filtersToUrlParameters (first:filters') = foldr addFilter (filterToUrlParameter first) filters'
+    addFilter filt accum = accum ++ " " ++ (filterToUrlParameter filt)
+
+filterToUrlParameter :: Filter -> String
+filterToUrlParameter (Filter (Column name) (SodaVal val)) = 
+-}
 
 {-
 limit :: Int -> Maybe Query
