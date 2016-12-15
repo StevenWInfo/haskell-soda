@@ -44,9 +44,12 @@ data Expr datatype where
 --data Func = Sum (Column (Expr Int)) -- ?
     -- | StartsWith (Column (Expr
 
+-- Improve
+type UParam = String
+
 -- I think I actually want the toUrlPart to be a function on Expr
 class SodaClass sodatype where
-    toUrlPart :: sodatype -> String
+    toUrlPart :: sodatype -> UParam
 
 -- Some of these might have conflicting names.
 -- |Corresponds to ternary valued values with Nothing as null.
@@ -84,6 +87,11 @@ instance SodaClass FloatingTimestamp where
         where tsFormat = iso8601DateFormat (Just "%T")
               ms = take 3 $ formatTime "%q" t
 
+-- TODO Bad name. Improve.
+-- |Utility function
+pointUrlPart :: Point -> UParam
+pointUPart (Point long lat) = (show long) ++ " " ++ (show lat)
+
 -- I'm actually not completely sure of the precision required here.
 -- Perhaps rename to Position and then have point as a type synonym (since I think that is semantically more correct).
 -- The toUrlPart for this one is a bit weird. Expr will have to have it's own serialize function for SoQL functions because points differ in those.
@@ -92,15 +100,25 @@ data Point = Point { longitude :: Double
                    , latitude  :: Double
                    } deriving (Show)
 instance SodaClass Point where
-    toUrlPart (Point long lat) = "'POINT (" ++ (show long) ++ " " ++ (show lat) ++ ")'"
+    toUrlPart point = "'POINT (" ++ (pointUPart point) ++ ")'"
+
+-- |Utility function
+commaSeperated :: [a] -> UParam
+commaSeperated [] = ""
+commaSeperated (first:others) = foldl' combiner first rest
+    where combiner accum x = accum ++ ", " ++ x
+
+-- TODO Similarly bad name
+-- |Utility function
+pointsUPart :: [Point] -> UParam
+pointsUPart points = "(" ++ (commaSeperated $ map pointUPart points) ++ ")"
+    
 
 -- This has an alternate WKT format. Have to test it out.
 -- TODO check if 
 type MultiPoint = [Point]
 instance SodaClass MultiPoint where
-    toUrlPart [] = "'MULTIPOINT ()'"
-    toUrlPart (first:points) = "'MULTIPOINT (" ++ (foldl' pointUrl first points) ++ ")'"
-        where pointUrl accum (Point long lat) = accum ++ ", " ++ (show long) ++ " " ++ (show lat)
+    toUrlPart points = "'MULTIPOINT " ++ (pointsUPart points) ++ "'"
 
 -- Possibly restrict the values used for these.
 data USAddress = USAddress { address :: String
@@ -118,18 +136,24 @@ instance SodaClass Location where
     toUrlPart _ = ""
                    
 -- The only difference in the data structure of Line and Multipoint is that Line has to have at least two positions/points in them
-newtype Line = Line { getLine :: [Point] } deriving (Show)
+newtype Line = Line { getLinePoints :: [Point] } deriving (Show)
 instance SodaClass Line where
-    toUrlPart [] = "'LINESTRING ()'"
-    toUrlPart (first:points) = "'LINESTRING (" ++ (foldl' pointUrl first points( ++ ")'"
-        where pointUrl accum (Point long lat) = accum ++ ", " ++ (show long) ++ " " ++ (show lat)
+    toUrlPart (Line points) = "'LINESTRING " ++ (pointsUPart points) ++ "'"
+
+linesUPart :: [[Point]] -> UParam
+linesUPart lines = "(" ++ (commaSeperated $ map pointsUPart lines) ++ ")"
 
 type MultiLine = [Line]
-instance SodaClass MultiLine
+instance SodaClass MultiLine where
+    toUrlPart lines = "'MULTILINESTRING " ++ (linesUPart $ map getLinePoints lines) ++ "'"
 
-type Polygon = [Point]
+newtype Polygon = Polygon { getPolyPoints :: [[Point]] }
+instance SodaClass Polygon where
+    toUrlPart (Polygon lines) = "'POLYGON " ++ (linesUPart lines)
 
 type MultiPolygon = [Polygon]
+instance SodaClass MultiPolygon where
+    toUrlPart polygons = "'MULTIPOLYGON (" ++ (commaSeperated $ map (linesUPart . getPolyPoints) polygons) ++ ")'"
 
 -- A bit confusing to use sodatype as a parameter all over the place, and have SodaType as an existential type.
 -- |Existential type representing one of the soda data types.
