@@ -12,6 +12,8 @@ import Data.Time.Clock
 
 {-|
 SODA datatypes
+
+Geographic values displayed plainly (like in a simple filter or where clause comparison) is displayed in Well-known Text (WKT).
  -}
 
  {-
@@ -42,6 +44,7 @@ data Expr datatype where
 --data Func = Sum (Column (Expr Int)) -- ?
     -- | StartsWith (Column (Expr
 
+-- I think I actually want the toUrlPart to be a function on Expr
 class SodaClass sodatype where
     toUrlPart :: sodatype -> String
 
@@ -89,10 +92,15 @@ data Point = Point { longitude :: Double
                    , latitude  :: Double
                    } deriving (Show)
 instance SodaClass Point where
-    toUrlPart (Point long lat) = "(" ++ (show long) ++ ", " ++ (show lat) ++ ")"
+    toUrlPart (Point long lat) = "'POINT (" ++ (show long) ++ " " ++ (show lat) ++ ")'"
 
+-- This has an alternate WKT format. Have to test it out.
+-- TODO check if 
 type MultiPoint = [Point]
-instance SodaClass MultiPoint
+instance SodaClass MultiPoint where
+    toUrlPart [] = "'MULTIPOINT ()'"
+    toUrlPart (first:points) = "'MULTIPOINT (" ++ (foldl' pointUrl first points) ++ ")'"
+        where pointUrl accum (Point long lat) = accum ++ ", " ++ (show long) ++ " " ++ (show lat)
 
 -- Possibly restrict the values used for these.
 data USAddress = USAddress { address :: String
@@ -103,12 +111,18 @@ data USAddress = USAddress { address :: String
 
 -- Should really require one of these not to be Nothing, but can put that restriction in the smart constructor.
 -- Use record syntax?
+-- I have no idea how this would be put into the parameter format. Ask on stackoverflow, but it might not be possible.
+-- |According to the SODA documentation, location is a legacy datatype so it is discouraged from being used and some SODA functions available for the point datatype are not available for the location datatype.
 data Location = Location (Maybe Point) (Maybe USAddress)
-instance SodaClass Location
+instance SodaClass Location where
+    toUrlPart _ = ""
                    
 -- The only difference in the data structure of Line and Multipoint is that Line has to have at least two positions/points in them
 newtype Line = Line { getLine :: [Point] } deriving (Show)
-instance SodaClass Line
+instance SodaClass Line where
+    toUrlPart [] = "'LINESTRING ()'"
+    toUrlPart (first:points) = "'LINESTRING (" ++ (foldl' pointUrl first points( ++ ")'"
+        where pointUrl accum (Point long lat) = accum ++ ", " ++ (show long) ++ " " ++ (show lat)
 
 type MultiLine = [Line]
 instance SodaClass MultiLine
