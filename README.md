@@ -1,5 +1,5 @@
 #haskell-soda
-Haskell bindings for the Socrata Open Data API
+Haskell bindings for the Socrata Open Data API (SODA).
 
 This library is designed to put many of the specifications of SODA into the types of the library. This attempts to constrain the URL - mostly the URL parameters - such that you will have a much greater guarantee at compile time that the API calls of your compiled program will succeed. It is also intended not to restrict any legitimate API calls from being created, but if it does, create a github issue.
 
