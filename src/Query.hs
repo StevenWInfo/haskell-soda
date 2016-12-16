@@ -39,10 +39,6 @@ data SodaTerm datatype = Col (Column datatype) | Ex (Expr datatype)
 
 -- Need to: Make a typeclass for possibly all soda functions (or at least all sets of types), then possibly also one that is for all soda types to make Column existentially quantified.
 
--- Perhaps need to restrict this further whereever this is used to exclude things like whitespace. Not sure if should do at value or type level.
-data Column sodatype where
-    Column :: SodaClass sodatype => String -> Column sodatype
-
 -- Could change content in the future because we can enforce it to follow the given datatypes
 type Content = String
 

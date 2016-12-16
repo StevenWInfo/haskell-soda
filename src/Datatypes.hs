@@ -20,26 +20,54 @@ Geographic values displayed plainly (like in a simple filter or where clause com
   - Have to make sure that the URL parameter serializations use the correct characters when serialization (like $ isn't confused with a parameter).
   -}
 
+-- Perhaps need to restrict this further whereever this is used to exclude things like whitespace. Not sure if should do at value or type level.
+data Column sodatype where
+    Column :: SodaClass sodatype => String -> Column sodatype
+
 -- Numbers, Doubles, and Moneys are numeric types that can interact. Might need to make an instance of numeric or a custom typeclass if I don't want them interacting with other types.
 
+-- Currently flawed in a few ways. Might be good to get a basic version working though and improving from there.
+-- Will need to test these type constraints further.
 data Expr datatype where
     SodaVal :: SodaClass a => a -> Expr a
-{-
-    Checkbox          :: Checkbox -> Expr Checkbox
-    MoneyE            :: Money -> Expr Money
-    Double            :: Double -> Expr Double
-    NumberE           :: Number -> Expr Number
-    Text              :: Text -> Expr Text
-    FloatingTimestamp :: FloatingTimestamp -> Expr FloatingTimestamp
-    PointE            :: Point -> Expr Point
-    MultiPointE       :: MultiPoint -> Expr MultiPoint
-    LocationE         :: Location -> Expr Location
-    LineE             :: Line -> Expr Line
-    MultiLineE        :: MultiLine -> Expr MultiLine
-    PolygonE          :: Polygon -> Expr Polygon
-    MultiPolygonE     :: MultiPolygon -> Expr MultiPolygon
-    -}
-    --Sum             :: Column (Expr Int)
+    SodaVar :: SodaClass a => Column a -> Expr a -- Agg but can be compared with values
+    Avg :: SodaClass a => Column a -> Expr Number -- Aggregate
+    Between :: (SodaClass a) => Expr a -> Expr a -> Expr Bool
+    Case :: Expr Bool -> Expr b -> Expr b
+    ConvexHull :: Column geo -> Expr MultiPolygon -- Geo typeclass. I think that it has to be a column, but I'm not sure.
+    Count :: SodaClass a => Column a -> Expr Number
+    DateTruncY :: Expr Timestamp -> Expr Timestamp
+    DateTruncYM :: Expr Timestamp -> Expr Timestamp
+    DateTruncYMD :: Expr Timestamp -> Expr Timestamp
+    Distance :: Expr Point -> Expr Point -> Expr Number
+    Extent :: Expr geo -> Expr MultiPolygon -- Takes an agg (can't use in where)
+    In :: Expr i -> Expr Bool -- Input needs to be constrained
+    Intersects :: Expr geo -> Expr geo -> Expr Bool
+    Like :: Expr SodaText -> Expr SodaText -> Expr Bool
+    Lower :: Expr SodaText -> Expr SodaText
+    Max :: Column a -> Expr a -- Special constraints
+    Min :: Column a -> Expr a -- Special constraints
+    NotBetween :: (SodaClass a) => Expr a -> Expr a -> Expr Bool
+    NotIn :: Expr i -> Expr Bool -- Input needs to be constrained
+    NotLike :: Expr SodaText -> Expr SodaText -> Expr Bool
+    NumPoints :: Expr geo -> Expr Number -- Geo constraint
+    Simplify :: Expr geoAlt -> Expr Number -> Expr geoAlt -- Alternative geo constraint. Need to test this.
+    SimplifyPreserveTopology  :: Expr geoAlt -> Expr Number -> Expr geoAlt -- Alternative geo constraint. Need to test this. Better name?
+    StartsWith :: Expr SodaText -> Expr SodaText -> Expr Bool
+    {-
+    StdDevPop
+    StdDevSamp
+    Sum :: Column (Expr Int)
+    Upper :: Expr SodaText -> Expr SodaText
+    WithinBox
+    WithinCircle
+    WithinPolygon
+
+    Other things like operators?
+    =
+    <
+    >
+    }
 
 --data Func = Sum (Column (Expr Int)) -- ?
     -- | StartsWith (Column (Expr
@@ -81,8 +109,8 @@ instance SodaClass SodaText where
     toUrlPart t = "'" ++ t ++ "'"
 
 -- Cuts off instead of rounding because I have no idea of a good way to handle rounding things like 999.9 milliseconds. If anyone has any better idea of how to handle this, let me know. I suppose I could test and see if the API will handle greater precision, even if it doesn't use it.
-type FloatingTimestamp = UTCTime
-instance SodaClass FloatingTimestamp where
+type Timestamp = UTCTime
+instance SodaClass Timestamp where
     toUrlPart t = (formatTime defaultTimeLocale tsFormat t) ++ roundedMS
         where tsFormat = iso8601DateFormat (Just "%T")
               ms = take 3 $ formatTime "%q" t
@@ -129,7 +157,7 @@ data USAddress = USAddress { address :: String
 
 -- Should really require one of these not to be Nothing, but can put that restriction in the smart constructor.
 -- Use record syntax?
--- I have no idea how this would be put into the parameter format. Ask on stackoverflow, but it might not be possible.
+-- One of the developers said on stack overflow that there is no representation for location types in things like a simple filter.
 -- |According to the SODA documentation, location is a legacy datatype so it is discouraged from being used and some SODA functions available for the point datatype are not available for the location datatype.
 data Location = Location (Maybe Point) (Maybe USAddress)
 instance SodaClass Location where

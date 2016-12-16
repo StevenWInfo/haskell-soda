@@ -36,6 +36,8 @@ import Query
     - Should it just give it as a string and the user parses it into a native type/format or should I include things to automatically convert it?
     - Maybe I'll put it in eventually, but for now just return as string.
 
+- There's lots of little things to consider like aliases as well.
+
 ##todo
 
 - Create consumer API - in process
