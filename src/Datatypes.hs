@@ -28,9 +28,10 @@ data Column sodatype where
 
 -- Currently flawed in a few ways. Might be good to get a basic version working though and improving from there.
 -- Will need to test these type constraints further.
+-- Even if I have to refactor/redesign this, documenting their types is useful.
 data Expr datatype where
     SodaVal :: SodaClass a => a -> Expr a
-    SodaVar :: SodaClass a => Column a -> Expr a -- Agg but can be compared with values
+    SodaVar :: SodaClass a => Column a -> Expr a -- Agg but can be compared with values. Something's not right with this, but I can't think well enough right now to figure it out.
     Avg :: SodaClass a => Column a -> Expr Number -- Aggregate
     Between :: (SodaClass a) => Expr a -> Expr a -> Expr Bool
     Case :: Expr Bool -> Expr b -> Expr b
@@ -54,23 +55,20 @@ data Expr datatype where
     Simplify :: Expr geoAlt -> Expr Number -> Expr geoAlt -- Alternative geo constraint. Need to test this.
     SimplifyPreserveTopology  :: Expr geoAlt -> Expr Number -> Expr geoAlt -- Alternative geo constraint. Need to test this. Better name?
     StartsWith :: Expr SodaText -> Expr SodaText -> Expr Bool
-    {-
-    StdDevPop
-    StdDevSamp
-    Sum :: Column (Expr Int)
+    StdDevPop :: Column num -> Expr Number -- Num constraint. First parameter might be Agg instead of Column
+    StdDevSamp :: Column num -> Expr Number -- Num constraint. First parameter might be Agg instead of Column
+    Sum :: Column Number -> Expr Number
     Upper :: Expr SodaText -> Expr SodaText
-    WithinBox
-    WithinCircle
-    WithinPolygon
+    WithinBox :: Expr geo -> Expr Point -> Expr Point -> Expr Point -> Expr Point -> Expr Bool -- Geo constraint that includes location
+    WithinCircle :: Expr geo -> Expr Point -> Expr Point -> Expr Number -> Expr Bool -- Geo constraint that includes location
+    WithinPolygon :: Expr geo -> Expr MultiPolygon -> Expr Bool -- Geo constraint that doesn't include location.
+    {-
 
     Other things like operators?
     =
     <
     >
     }
-
---data Func = Sum (Column (Expr Int)) -- ?
-    -- | StartsWith (Column (Expr
 
 -- Improve
 type UParam = String
