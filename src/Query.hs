@@ -152,3 +152,6 @@ combineQI qm1 qm2 = do
 -- This might be a monoid? Also, make a show instance for it.
 -- Need to figure out how this works.
 data QueryError = WhereError
+
+-- Paging functionality
+-- TODO

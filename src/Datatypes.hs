@@ -185,9 +185,3 @@ instance SodaClass MultiPolygon where
 -- |Existential type representing one of the soda data types.
 data SodaType where
     MkSodaType :: SodaClass a => a -> SodaType
-
--- SoSQL functions
--- TODO
-
--- Paging functionality
--- TODO
