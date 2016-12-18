@@ -49,9 +49,10 @@ instance SodaExpr (SodaVal sodatype) where
     toUrlParam (SodaVal val) = toUrlPart val
 
 -- Maybe make more descriptive types later.
+-- Would some more dependent type features have made this simpler?
 data SodaFunc datatype where
     Avg :: SodaTypes a => Column a -> SodaFunc Number -- Aggregate
-    Between :: (SodaExpr sodaExpr, SodaTypes sodaType) => sodaExpr sodaType -> sodaExprAlt sodaType -> SodaFunc Checkbox -- Need another type constraint on sodaType
+    Between :: (SodaExpr sodaExpr, SodaExpr sodaExprAlt, SodaTypes sodaType) => sodaExpr sodaType -> sodaExprAlt sodaType -> SodaFunc Checkbox -- Need another type constraint on sodaType
     Case :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m Checkbox -> n b -> SodaFunc b -- Can the condition have a checkbox value/
     ConvexHull :: (SodaTypes geo) => Column geo -> SodaFunc MultiPolygon -- Geo typeclass. I think that it has to be a column, but I'm not sure.
     Count :: SodaTypes a => Column a -> SodaFunc Number
@@ -63,23 +64,23 @@ data SodaFunc datatype where
     In :: (SodaExpr m, SodaExpr n, SodaType a, SodaType b) => m a -> [n b] -> SodaFunc Checkbox -- Input needs to be constrained
     Intersects :: (SodaExpr m, SodaExpr n, SodaType a, SodaType b) => m a -> n b -> SodaFunc Checkbox
     Like :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaFunc Checkbox
-    Lower :: Expr SodaText -> SodaFunc SodaText
-    Max :: Column a -> SodaFunc a -- Special constraints
-    Min :: Column a -> SodaFunc a -- Special constraints
-    NotBetween :: (SodaTypes a) => Expr a -> Expr a -> SodaFunc Checkbox
-    NotIn :: Expr i -> SodaFunc Checkbox -- Input needs to be constrained
-    NotLike :: Expr SodaText -> Expr SodaText -> SodaFunc Checkbox
-    NumPoints :: Expr geo -> SodaFunc Number -- Geo constraint
-    Simplify :: Expr geoAlt -> Expr Number -> SodaFunc geoAlt -- Alternative geo constraint. Need to test this.
-    SimplifyPreserveTopology  :: Expr geoAlt -> Expr Number -> SodaFunc geoAlt -- Alternative geo constraint. Need to test this. Better name?
-    StartsWith :: Expr SodaText -> Expr SodaText -> SodaFunc Checkbox
-    StdDevPop :: Column num -> SodaFunc Number -- Num constraint. First parameter might be Agg instead of Column
-    StdDevSamp :: Column num -> SodaFunc Number -- Num constraint. First parameter might be Agg instead of Column
+    Lower :: (SodaExpr m) => m SodaText -> SodaFunc SodaText
+    Max :: (SodaType a) => Column a -> SodaFunc a -- Special constraints
+    Min :: (SodaType a) => Column a -> SodaFunc a -- Special constraints
+    NotBetween :: (SodaExpr m, SodaExpr n, SodaTypes a) => m a -> n a -> SodaFunc Checkbox
+    NotIn :: (SodaExpr m, SodaExpr n, SodaType a, SodaType b) => m a -> n b -> SodaFunc Checkbox -- Input needs to be constrained
+    NotLike :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaFunc Checkbox
+    NumPoints :: (SodaExpr m, SodaType geo) => m geo -> SodaFunc Number -- Geo constraint
+    Simplify :: (SodaExpr m, SodaExpr n, SodaType geoAlt) => m geoAlt -> n Number -> SodaFunc geoAlt -- Alternative geo constraint. Need to test this.
+    SimplifyPreserveTopology :: (SodaExpr m, SodaExpr n, SodaType geoAlt) => m geoAlt -> n Number -> SodaFunc geoAlt -- Alternative geo constraint. Need to test this. Better name?
+    StartsWith :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaFunc Checkbox
+    StdDevPop :: (SodaType num) => Column num -> SodaFunc Number -- Num constraint. First parameter might be Agg instead of Column
+    StdDevSamp :: (SodaType num) => Column num -> SodaFunc Number -- Num constraint. First parameter might be Agg instead of Column
     Sum :: Column Number -> SodaFunc Number
-    Upper :: Expr SodaText -> SodaFunc SodaText
-    WithinBox :: Expr geo -> Expr Point -> Expr Point -> Expr Point -> Expr Point -> SodaFunc Checkbox -- Geo constraint that includes location
-    WithinCircle :: Expr geo -> Expr Point -> Expr Point -> Expr Number -> SodaFunc Checkbox -- Geo constraint that includes location
-    WithinPolygon :: Expr geo -> Expr MultiPolygon -> SodaFunc Checkbox -- Geo constraint that doesn't include location.
+    Upper :: (SodaExpr m) => m SodaText -> SodaFunc SodaText
+    WithinBox :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaExpr q, SodaType geo) => m geo -> n Point -> o Point -> p Point -> q Point -> SodaFunc Checkbox -- Geo constraint that includes location
+    WithinCircle :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaType geo) => m geo -> n Point -> o Point -> p Number -> SodaFunc Checkbox -- Geo constraint that includes location
+    WithinPolygon :: (SodaExpr m, SodaExpr n, SodaType geo) => m geo -> n MultiPolygon -> SodaFunc Checkbox -- Geo constraint that doesn't include location.
     {-
 
     Other things like operators?
