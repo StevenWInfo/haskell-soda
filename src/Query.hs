@@ -54,7 +54,8 @@ type NonNegative = Int
 data Sorting = ASC | DESC
 
 -- Could possibly be confused with Ord class.
-data Order = Order (Column SodaType) Sorting
+-- Fix this.
+data Order = Order (Column SodaTypeBox) Sorting
 
 -- |A SODA simple filter as an existential type (to fit into the query type cleanly).
 data Filter where
