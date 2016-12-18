@@ -35,8 +35,6 @@ Elements which make SoQL and other parts of identifying what data you want easie
 - Clean up and make things like naming more consistant.
 -}
 
-data SodaTerm datatype = Col (Column datatype) | Ex (Expr datatype)
-
 -- Need to: Make a typeclass for possibly all soda functions (or at least all sets of types), then possibly also one that is for all soda types to make Column existentially quantified.
 
 -- Could change content in the future because we can enforce it to follow the given datatypes
@@ -59,7 +57,7 @@ data Order = Order (Column SodaTypeBox) Sorting
 
 -- |A SODA simple filter as an existential type (to fit into the query type cleanly).
 data Filter where
-    Filter :: SodaClass sodatype => (Column sodatype) -> (Expr sodatype) -> Filter
+    Filter :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
 
 -- Selects are a little trickier than just strings. Have to be able to mix with certain functions and things as well as aliases.
 type Select = String
@@ -70,7 +68,7 @@ type Having = String
 
 -- Possibly confusion with the mathematical concept of a group
 data GroupElem where
-    Groupify :: SodaClass sodatype => sodatype -> GroupElem
+    Groupify :: SodaTypes sodatype => Column sodatype -> GroupElem
 
 -- Possibly be more specific in the types like "Column" or something.
 -- Need to account for negative limit, which doesn't make sense, somehow.

@@ -2,13 +2,16 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Datatypes
-    ( Expr
+    ( SodaExpr
     , SodaTypes
-    , SodaTypes
+    , SodaTypeBox
+    , Column
     ) where
 
+import Data.List
 import Data.Time.Calendar
 import Data.Time.Clock
+import Data.Time.Format
 
 {-|
 SODA datatypes
@@ -32,9 +35,9 @@ class SodaTypes sodatype where
 
 -- Perhaps need to restrict this further whereever this is used to exclude things like whitespace. Not sure if should do at value or type level.
 data Column sodatype where
-    Column :: SodaTypes sodatype => String -> Column sodatype
+    Column :: (SodaTypes sodatype) => String -> Column sodatype
 
-instance SodaExpr (Column sodatype) where
+instance SodaExpr Column where
     toUrlParam (Column name) = name
 
 -- Numbers, Doubles, and Moneys are numeric types that can interact. Might need to make an instance of numeric or a custom typeclass if I don't want them interacting with other types.
@@ -45,7 +48,7 @@ instance SodaExpr (Column sodatype) where
 data SodaVal datatype where
     SodaVal :: SodaTypes a => a -> SodaVal a
 
-instance SodaExpr (SodaVal sodatype) where
+instance SodaExpr SodaVal where
     toUrlParam (SodaVal val) = toUrlPart val
 
 -- Maybe make more descriptive types later.
@@ -53,34 +56,34 @@ instance SodaExpr (SodaVal sodatype) where
 data SodaFunc datatype where
     Avg :: SodaTypes a => Column a -> SodaFunc Number -- Aggregate
     Between :: (SodaExpr sodaExpr, SodaExpr sodaExprAlt, SodaTypes sodaType) => sodaExpr sodaType -> sodaExprAlt sodaType -> SodaFunc Checkbox -- Need another type constraint on sodaType
-    Case :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m Checkbox -> n b -> SodaFunc b -- Can the condition have a checkbox value/
+    Case :: (SodaExpr m, SodaExpr n, SodaTypes a) => m Checkbox -> n a -> SodaFunc a -- Can the condition have a checkbox value/
     ConvexHull :: (SodaTypes geo) => Column geo -> SodaFunc MultiPolygon -- Geo typeclass. I think that it has to be a column, but I'm not sure.
     Count :: SodaTypes a => Column a -> SodaFunc Number
     DateTruncY :: (SodaExpr m) => m Timestamp -> SodaFunc Timestamp
     DateTruncYM :: (SodaExpr m) => m Timestamp -> SodaFunc Timestamp
     DateTruncYMD :: (SodaExpr m) => m Timestamp -> SodaFunc Timestamp
     Distance :: (SodaExpr m, SodaExpr n) => m Point -> n Point -> SodaFunc Number
-    Extent :: (SodaExpr m, SodaType geo) => m geo -> SodaFunc MultiPolygon -- Takes an agg (can't use in where)
-    In :: (SodaExpr m, SodaExpr n, SodaType a, SodaType b) => m a -> [n b] -> SodaFunc Checkbox -- Input needs to be constrained
-    Intersects :: (SodaExpr m, SodaExpr n, SodaType a, SodaType b) => m a -> n b -> SodaFunc Checkbox
+    Extent :: (SodaExpr m, SodaTypes geo) => m geo -> SodaFunc MultiPolygon -- Takes an agg (can't use in where)
+    In :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> [n b] -> SodaFunc Checkbox -- Input needs to be constrained
+    Intersects :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaFunc Checkbox
     Like :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaFunc Checkbox
     Lower :: (SodaExpr m) => m SodaText -> SodaFunc SodaText
-    Max :: (SodaType a) => Column a -> SodaFunc a -- Special constraints
-    Min :: (SodaType a) => Column a -> SodaFunc a -- Special constraints
+    Max :: (SodaTypes a) => Column a -> SodaFunc a -- Special constraints
+    Min :: (SodaTypes a) => Column a -> SodaFunc a -- Special constraints
     NotBetween :: (SodaExpr m, SodaExpr n, SodaTypes a) => m a -> n a -> SodaFunc Checkbox
-    NotIn :: (SodaExpr m, SodaExpr n, SodaType a, SodaType b) => m a -> n b -> SodaFunc Checkbox -- Input needs to be constrained
+    NotIn :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaFunc Checkbox -- Input needs to be constrained
     NotLike :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaFunc Checkbox
-    NumPoints :: (SodaExpr m, SodaType geo) => m geo -> SodaFunc Number -- Geo constraint
-    Simplify :: (SodaExpr m, SodaExpr n, SodaType geoAlt) => m geoAlt -> n Number -> SodaFunc geoAlt -- Alternative geo constraint. Need to test this.
-    SimplifyPreserveTopology :: (SodaExpr m, SodaExpr n, SodaType geoAlt) => m geoAlt -> n Number -> SodaFunc geoAlt -- Alternative geo constraint. Need to test this. Better name?
+    NumPoints :: (SodaExpr m, SodaTypes geo) => m geo -> SodaFunc Number -- Geo constraint
+    Simplify :: (SodaExpr m, SodaExpr n, SodaTypes geoAlt) => m geoAlt -> n Number -> SodaFunc geoAlt -- Alternative geo constraint. Need to test this.
+    SimplifyPreserveTopology :: (SodaExpr m, SodaExpr n, SodaTypes geoAlt) => m geoAlt -> n Number -> SodaFunc geoAlt -- Alternative geo constraint. Need to test this. Better name?
     StartsWith :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaFunc Checkbox
-    StdDevPop :: (SodaType num) => Column num -> SodaFunc Number -- Num constraint. First parameter might be Agg instead of Column
-    StdDevSamp :: (SodaType num) => Column num -> SodaFunc Number -- Num constraint. First parameter might be Agg instead of Column
+    StdDevPop :: (SodaTypes num) => Column num -> SodaFunc Number -- Num constraint. First parameter might be Agg instead of Column
+    StdDevSamp :: (SodaTypes num) => Column num -> SodaFunc Number -- Num constraint. First parameter might be Agg instead of Column
     Sum :: Column Number -> SodaFunc Number
     Upper :: (SodaExpr m) => m SodaText -> SodaFunc SodaText
-    WithinBox :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaExpr q, SodaType geo) => m geo -> n Point -> o Point -> p Point -> q Point -> SodaFunc Checkbox -- Geo constraint that includes location
-    WithinCircle :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaType geo) => m geo -> n Point -> o Point -> p Number -> SodaFunc Checkbox -- Geo constraint that includes location
-    WithinPolygon :: (SodaExpr m, SodaExpr n, SodaType geo) => m geo -> n MultiPolygon -> SodaFunc Checkbox -- Geo constraint that doesn't include location.
+    WithinBox :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaExpr q, SodaTypes geo) => m geo -> n Point -> o Point -> p Point -> q Point -> SodaFunc Checkbox -- Geo constraint that includes location
+    WithinCircle :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaTypes geo) => m geo -> n Point -> o Point -> p Number -> SodaFunc Checkbox -- Geo constraint that includes location
+    WithinPolygon :: (SodaExpr m, SodaExpr n, SodaTypes geo) => m geo -> n MultiPolygon -> SodaFunc Checkbox -- Geo constraint that doesn't include location.
     {-
 
     Other things like operators?
@@ -89,14 +92,17 @@ data SodaFunc datatype where
     >
     -}
 
+-- This is going to take a while.
+--instance SodaExpr (SodaFunc sodatype) where
+
 -- Some of these might have conflicting names.
 -- Sort of want an implicit bool type as well, but it's a bit tricky to implement
 -- |Corresponds to ternary valued values with Nothing as null.
 type Checkbox = Maybe Bool
 instance SodaTypes (Maybe Bool) where
     toUrlPart Nothing = "null"
-    toUrlPart Just True = "true"
-    toUrlPart Just Fail = "false"
+    toUrlPart (Just True) = "true"
+    toUrlPart (Just False) = "false"
 
 -- Not sure if money is just fixed precision or more complicated. Round until I find a way to use a better type.
 -- If we're just talking about US dollars, I suppose I could record as an integer of cents.
@@ -122,13 +128,13 @@ instance SodaTypes SodaText where
 -- Cuts off instead of rounding because I have no idea of a good way to handle rounding things like 999.9 milliseconds. If anyone has any better idea of how to handle this, let me know. I suppose I could test and see if the API will handle greater precision, even if it doesn't use it.
 type Timestamp = UTCTime
 instance SodaTypes Timestamp where
-    toUrlPart t = (formatTime defaultTimeLocale tsFormat t) ++ roundedMS
+    toUrlPart t = (formatTime defaultTimeLocale tsFormat t) ++ ms
         where tsFormat = iso8601DateFormat (Just "%T")
-              ms = take 3 $ formatTime "%q" t
+              ms = take 3 $ formatTime defaultTimeLocale "%q" t
 
 -- TODO Bad name. Improve.
 -- |Utility function
-pointUrlPart :: Point -> UParam
+pointUPart :: Point -> UParam
 pointUPart (Point long lat) = (show long) ++ " " ++ (show lat)
 
 -- I'm actually not completely sure of the precision required here.
@@ -142,9 +148,9 @@ instance SodaTypes Point where
     toUrlPart point = "'POINT (" ++ (pointUPart point) ++ ")'"
 
 -- |Utility function. I saw that there's an even simpler function for this in Data.List
-commaSeperated :: [a] -> UParam
+commaSeperated :: [UParam] -> UParam
 commaSeperated [] = ""
-commaSeperated (first:others) = foldl' combiner first rest
+commaSeperated (first:rest) = foldl' combiner first rest
     where combiner accum x = accum ++ ", " ++ x
 
 -- TODO Similarly bad name
@@ -198,4 +204,4 @@ instance SodaTypes MultiPolygon where
 -- Fix this
 -- |Existential type representing one of the soda data types.
 data SodaTypeBox where
-    MkSodaType :: SodaTypeBox a => a -> SodaTypeBox
+    MkSodaType :: SodaTypes a => a -> SodaTypeBox
