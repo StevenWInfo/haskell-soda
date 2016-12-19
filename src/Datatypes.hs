@@ -55,7 +55,7 @@ instance SodaExpr SodaVal where
 -- Would some more dependent type features have made this simpler?
 data SodaFunc datatype where
     Avg :: SodaTypes a => Column a -> SodaFunc Number -- Aggregate
-    Between :: (SodaExpr sodaExpr, SodaExpr sodaExprAlt, SodaTypes sodaType) => sodaExpr sodaType -> sodaExprAlt sodaType -> SodaFunc Checkbox -- Need another type constraint on sodaType
+    Between :: (SodaExpr m, SodaExpr sodaExpr, SodaExpr sodaExprAlt, SodaType a, SodaTypes sodaType) => m a -> sodaExpr sodaType -> sodaExprAlt sodaType -> SodaFunc Checkbox -- Need another type constraint on sodaType
     Case :: (SodaExpr m, SodaExpr n, SodaTypes a) => m Checkbox -> n a -> SodaFunc a -- Can the condition have a checkbox value/
     ConvexHull :: (SodaTypes geo) => Column geo -> SodaFunc MultiPolygon -- Geo typeclass. I think that it has to be a column, but I'm not sure.
     Count :: SodaTypes a => Column a -> SodaFunc Number
@@ -91,6 +91,42 @@ data SodaFunc datatype where
     <
     >
     -}
+
+scoper :: (SodaExpr m) => m a -> UParam
+scoper SodaFunc a = "(" ++ (toUrlParam (SodaFunc a) ++ ")"
+scoper = toUrlParam
+
+instance SodaExpr SodaFunc where
+    toUrlParam (Avg col) = "avg(" ++ (toUrlParam col) ++ ")"
+    toUrlParam (Between val first last) = (scoper val) ++ " between " ++ (scoper first) ++ " and " ++ (scoper last)
+    toUrlParam (Case 
+    toUrlParam (ConvexHull 
+    toUrlParam (Count 
+    toUrlParam (DateTruncY 
+    toUrlParam (DateTruncYM 
+    toUrlParam (DateTruncYMD 
+    toUrlParam (Distance 
+    toUrlParam (Extent 
+    toUrlParam (In 
+    toUrlParam (Intersects 
+    toUrlParam (Like 
+    toUrlParam (Lower 
+    toUrlParam (Max 
+    toUrlParam (Min 
+    toUrlParam (NotBetween 
+    toUrlParam (NotIn 
+    toUrlParam (NotLike 
+    toUrlParam (NumPoints 
+    toUrlParam (Simplify 
+    toUrlParam (SimplifyPreserveTopology 
+    toUrlParam (StartsWith 
+    toUrlParam (StdDevPop 
+    toUrlParam (StdDevSamp 
+    toUrlParam (Sum 
+    toUrlParam (Upper 
+    toUrlParam (WithinBox 
+    toUrlParam (WithinCircle 
+    toUrlParam (WithinPolygon 
 
 -- This is going to take a while.
 --instance SodaExpr (SodaFunc sodatype) where
