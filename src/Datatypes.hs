@@ -21,6 +21,8 @@ Geographic values displayed plainly (like in a simple filter or where clause com
 
  {-
   - Have to make sure that the URL parameter serializations use the correct characters when serialization (like $ isn't confused with a parameter).
+  -
+  - I could make some of my own functions that use the SoQL functions as well.
   -}
 
 -- Improve
@@ -56,7 +58,7 @@ instance SodaExpr SodaVal where
 data SodaFunc datatype where
     Avg :: SodaTypes a => Column a -> SodaFunc Number -- Aggregate
     Between :: (SodaExpr m, SodaExpr sodaExpr, SodaExpr sodaExprAlt, SodaType a, SodaTypes sodaType) => m a -> sodaExpr sodaType -> sodaExprAlt sodaType -> SodaFunc Checkbox -- Need another type constraint on sodaType
-    Case :: (SodaExpr m, SodaExpr n, SodaTypes a) => m Checkbox -> n a -> SodaFunc a -- Can the condition have a checkbox value/
+    Case :: (SodaExpr m, SodaExpr n, SodaTypes a) => [(m Checkbox, n a)] -> SodaFunc a -- Can the condition have a checkbox value/
     ConvexHull :: (SodaTypes geo) => Column geo -> SodaFunc MultiPolygon -- Geo typeclass. I think that it has to be a column, but I'm not sure.
     Count :: SodaTypes a => Column a -> SodaFunc Number
     DateTruncY :: (SodaExpr m) => m Timestamp -> SodaFunc Timestamp
@@ -92,34 +94,37 @@ data SodaFunc datatype where
     >
     -}
 
+{- I don't think any automatic scoping with parenthesis is necessary, but I might need it. Might be good to have a manual one just in case, for people who want it, and for other parts that need it.
 scoper :: (SodaExpr m) => m a -> UParam
 scoper SodaFunc a = "(" ++ (toUrlParam (SodaFunc a) ++ ")"
 scoper = toUrlParam
+-}
 
+-- Should the capitalization be consistant?
 instance SodaExpr SodaFunc where
     toUrlParam (Avg col) = "avg(" ++ (toUrlParam col) ++ ")"
-    toUrlParam (Between val first last) = (scoper val) ++ " between " ++ (scoper first) ++ " and " ++ (scoper last)
-    toUrlParam (Case 
-    toUrlParam (ConvexHull 
-    toUrlParam (Count 
-    toUrlParam (DateTruncY 
-    toUrlParam (DateTruncYM 
-    toUrlParam (DateTruncYMD 
-    toUrlParam (Distance 
-    toUrlParam (Extent 
-    toUrlParam (In 
-    toUrlParam (Intersects 
-    toUrlParam (Like 
-    toUrlParam (Lower 
-    toUrlParam (Max 
-    toUrlParam (Min 
-    toUrlParam (NotBetween 
-    toUrlParam (NotIn 
-    toUrlParam (NotLike 
-    toUrlParam (NumPoints 
-    toUrlParam (Simplify 
-    toUrlParam (SimplifyPreserveTopology 
-    toUrlParam (StartsWith 
+    toUrlParam (Between val first last) = (toUrlParam val) ++ " between " ++ (toUrlParam first) ++ " and " ++ (toUrlParam last)
+    toUrlParam (Case paths) = "case(" ++ (commaSeperated (map (\(cond, result) -> (toUrlParam cond) ++ ", " ++ (toUrlParam result)))) ++ ")"
+    toUrlParam (ConvexHull shape) = "convex_hull(" ++ toUrlParam ++ ")"
+    toUrlParam (Count rows) = "count(" ++ (toUrlParam rows) ++ ")"
+    toUrlParam (DateTruncY time) = "date_trunc_y(" ++ (toUrlParam time) ++ ")"
+    toUrlParam (DateTruncYM time) = "date_trunc_ym(" ++ (toUrlParam) ++ ")"
+    toUrlParam (DateTruncYMD time) = "date_trunc_ymd(" ++ (toUrlParam) ++ ")"
+    toUrlParam (Distance pointA pointB) = "distance_in_meters(" ++ (toUrlParam pointA) ++ ", " ++ (toUrlParam pointB) ++ ")"
+    toUrlParam (Extent points) = "extent(" ++ (toUrlParam points) ++ ")"
+    toUrlParam (In element values) = (toUrlParam element) ++ " IN(" ++ commaSeperated (map toUrlParam values) ++ ")"
+    toUrlParam (Intersects shapeA shapeB) = "intersects(" ++ (toUrlParam shapeA) ++ ", " (toUrlParam shapeB) ++ ")"
+    toUrlParam (Like textA textB) = (toUrlParam textA) ++ " like " ++ (toUrlParam textB)
+    toUrlParam (Lower text) = "lower(" ++ (toUrlParam text) ++ ")"
+    toUrlParam (Max numbers) = "max(" ++ (toUrlParam numbers) ++ ")"
+    toUrlParam (Min numbers) = "min(" ++ (toUrlParam numbers) ++ ")"
+    toUrlParam (NotBetween val first last) = (toUrlParam val) ++ " not between " ++ (toUrlParam first) ++ " and " ++ (toUrlParam last)
+    toUrlParam (NotIn element values) = (toUrlParam element) ++ " not in(" ++ commaSeperated (map toUrlParam values) ++ ")"
+    toUrlParam (NotLike textA textB) =  (toUrlParam textA) ++ " not like " ++ (toUrlParam textB)
+    toUrlParam (NumPoints points) = "num_points(" ++ (toUrlParam points) ++ ")"
+    toUrlParam (Simplify geometry tolerance) = "simplify(" ++ (toUrlParam geometry) ++ ", " ++ (toUrlParam tolerance) ++ ")"
+    toUrlParam (SimplifyPreserveTopology geometry tolerance) = "simplify_preserve_topology(" ++ (toUrlParam geometry) ++ ", " ++ (toUrlParam tolerance) ++ ")"
+    toUrlParam (StartsWith haystack needle) = "starts_with(" ++ (toUrlParam haystack) ++ ", " ++ (toUrlParam needle) ++ ")"
     toUrlParam (StdDevPop 
     toUrlParam (StdDevSamp 
     toUrlParam (Sum 
