@@ -23,6 +23,8 @@ Geographic values displayed plainly (like in a simple filter or where clause com
   - Have to make sure that the URL parameter serializations use the correct characters when serialization (like $ isn't confused with a parameter).
   -
   - I could make some of my own functions that use the SoQL functions as well.
+  -
+  - Might need to have the numeric types be flexible enough to interact with eachother.
   -}
 
 -- Improve
@@ -57,7 +59,7 @@ instance SodaExpr SodaVal where
 -- Would some more dependent type features have made this simpler?
 data SodaFunc datatype where
     Avg :: SodaTypes a => Column a -> SodaFunc Number -- Aggregate
-    Between :: (SodaExpr m, SodaExpr sodaExpr, SodaExpr sodaExprAlt, SodaType a, SodaTypes sodaType) => m a -> sodaExpr sodaType -> sodaExprAlt sodaType -> SodaFunc Checkbox -- Need another type constraint on sodaType
+    Between :: (SodaExpr m, SodaExpr sodaExpr, SodaExpr sodaExprAlt, SodaTypes sodaType) => m sodaType -> sodaExpr sodaType -> sodaExprAlt sodaType -> SodaFunc Checkbox -- Need another type constraint on sodaType
     Case :: (SodaExpr m, SodaExpr n, SodaTypes a) => [(m Checkbox, n a)] -> SodaFunc a -- Can the condition have a checkbox value/
     ConvexHull :: (SodaTypes geo) => Column geo -> SodaFunc MultiPolygon -- Geo typeclass. I think that it has to be a column, but I'm not sure.
     Count :: SodaTypes a => Column a -> SodaFunc Number
@@ -72,8 +74,8 @@ data SodaFunc datatype where
     Lower :: (SodaExpr m) => m SodaText -> SodaFunc SodaText
     Max :: (SodaTypes a) => Column a -> SodaFunc a -- Special constraints
     Min :: (SodaTypes a) => Column a -> SodaFunc a -- Special constraints
-    NotBetween :: (SodaExpr m, SodaExpr n, SodaTypes a) => m a -> n a -> SodaFunc Checkbox
-    NotIn :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaFunc Checkbox -- Input needs to be constrained
+    NotBetween :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaTypes a) => m a -> n a -> o a -> SodaFunc Checkbox
+    NotIn :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> [n b] -> SodaFunc Checkbox -- Input needs to be constrained
     NotLike :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaFunc Checkbox
     NumPoints :: (SodaExpr m, SodaTypes geo) => m geo -> SodaFunc Number -- Geo constraint
     Simplify :: (SodaExpr m, SodaExpr n, SodaTypes geoAlt) => m geoAlt -> n Number -> SodaFunc geoAlt -- Alternative geo constraint. Need to test this.
@@ -104,16 +106,16 @@ scoper = toUrlParam
 instance SodaExpr SodaFunc where
     toUrlParam (Avg col) = "avg(" ++ (toUrlParam col) ++ ")"
     toUrlParam (Between val first last) = (toUrlParam val) ++ " between " ++ (toUrlParam first) ++ " and " ++ (toUrlParam last)
-    toUrlParam (Case paths) = "case(" ++ (commaSeperated (map (\(cond, result) -> (toUrlParam cond) ++ ", " ++ (toUrlParam result)))) ++ ")"
-    toUrlParam (ConvexHull shape) = "convex_hull(" ++ toUrlParam ++ ")"
+    toUrlParam (Case paths) = "case(" ++ (commaSeperated (map (\(cond, result) -> (toUrlParam cond) ++ ", " ++ (toUrlParam result)) paths)) ++ ")"
+    toUrlParam (ConvexHull shape) = "convex_hull(" ++ toUrlParam shape ++ ")"
     toUrlParam (Count rows) = "count(" ++ (toUrlParam rows) ++ ")"
     toUrlParam (DateTruncY time) = "date_trunc_y(" ++ (toUrlParam time) ++ ")"
-    toUrlParam (DateTruncYM time) = "date_trunc_ym(" ++ (toUrlParam) ++ ")"
-    toUrlParam (DateTruncYMD time) = "date_trunc_ymd(" ++ (toUrlParam) ++ ")"
+    toUrlParam (DateTruncYM time) = "date_trunc_ym(" ++ (toUrlParam time) ++ ")"
+    toUrlParam (DateTruncYMD time) = "date_trunc_ymd(" ++ (toUrlParam time) ++ ")"
     toUrlParam (Distance pointA pointB) = "distance_in_meters(" ++ (toUrlParam pointA) ++ ", " ++ (toUrlParam pointB) ++ ")"
     toUrlParam (Extent points) = "extent(" ++ (toUrlParam points) ++ ")"
     toUrlParam (In element values) = (toUrlParam element) ++ " IN(" ++ (commaSeperated (map toUrlParam values)) ++ ")"
-    toUrlParam (Intersects shapeA shapeB) = "intersects(" ++ (toUrlParam shapeA) ++ ", " (toUrlParam shapeB) ++ ")"
+    toUrlParam (Intersects shapeA shapeB) = "intersects(" ++ (toUrlParam shapeA) ++ ", " ++ (toUrlParam shapeB) ++ ")"
     toUrlParam (Like textA textB) = (toUrlParam textA) ++ " like " ++ (toUrlParam textB)
     toUrlParam (Lower text) = "lower(" ++ (toUrlParam text) ++ ")"
     toUrlParam (Max numbers) = "max(" ++ (toUrlParam numbers) ++ ")"
@@ -125,12 +127,12 @@ instance SodaExpr SodaFunc where
     toUrlParam (Simplify geometry tolerance) = "simplify(" ++ (toUrlParam geometry) ++ ", " ++ (toUrlParam tolerance) ++ ")"
     toUrlParam (SimplifyPreserveTopology geometry tolerance) = "simplify_preserve_topology(" ++ (toUrlParam geometry) ++ ", " ++ (toUrlParam tolerance) ++ ")"
     toUrlParam (StartsWith haystack needle) = "starts_with(" ++ (toUrlParam haystack) ++ ", " ++ (toUrlParam needle) ++ ")"
-    toUrlParam (StdDevPop nums) = "stddev_pop(" ++ (toUrlParam nms) ++ ")"
+    toUrlParam (StdDevPop nums) = "stddev_pop(" ++ (toUrlParam nums) ++ ")"
     toUrlParam (StdDevSamp nums) = "stddev_samp(" ++ (toUrlParam nums) ++ ")"
     toUrlParam (Sum nums) = "sum(" ++ (toUrlParam nums) ++ ")"
     toUrlParam (Upper text) = "upper(" ++ (toUrlParam text) ++ ")"
-    toUrlParam (WithinBox point nwLat nwLong seLat seLong) = "whithin_box(" ++ (commaSeperated (map toUrlParam [point, nwLat, nwLong, seLat, seLong])) ++ ")"
-    toUrlParam (WithinCircle point centerLat centerLong radius) = "whithin_circle(" ++ (commaSeperated (map toUrlParam [point, centerLat, centerLong, radius])) ++ ")"
+    toUrlParam (WithinBox shape nwLat nwLong seLat seLong) = "whithin_box(" ++ (toUrlParam shape) ++ ", " ++ (toUrlParam nwLat) ++ ", " ++ (toUrlParam nwLong) ++ ", " ++ (toUrlParam seLat) ++ ", " ++ (toUrlParam seLong) ++ ")"
+    toUrlParam (WithinCircle point centerLat centerLong radius) = "whithin_circle(" ++ (toUrlParam point) ++ (toUrlParam centerLat) ++ (toUrlParam centerLong) ++ (toUrlParam radius) ++ ")"
     toUrlParam (WithinPolygon point multipolygon) = "within_polygon(" ++ (toUrlParam point) ++ ", " ++ (toUrlParam multipolygon) ++ ")"
 
 -- This is going to take a while.
