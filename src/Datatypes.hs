@@ -112,26 +112,26 @@ instance SodaExpr SodaFunc where
     toUrlParam (DateTruncYMD time) = "date_trunc_ymd(" ++ (toUrlParam) ++ ")"
     toUrlParam (Distance pointA pointB) = "distance_in_meters(" ++ (toUrlParam pointA) ++ ", " ++ (toUrlParam pointB) ++ ")"
     toUrlParam (Extent points) = "extent(" ++ (toUrlParam points) ++ ")"
-    toUrlParam (In element values) = (toUrlParam element) ++ " IN(" ++ commaSeperated (map toUrlParam values) ++ ")"
+    toUrlParam (In element values) = (toUrlParam element) ++ " IN(" ++ (commaSeperated (map toUrlParam values)) ++ ")"
     toUrlParam (Intersects shapeA shapeB) = "intersects(" ++ (toUrlParam shapeA) ++ ", " (toUrlParam shapeB) ++ ")"
     toUrlParam (Like textA textB) = (toUrlParam textA) ++ " like " ++ (toUrlParam textB)
     toUrlParam (Lower text) = "lower(" ++ (toUrlParam text) ++ ")"
     toUrlParam (Max numbers) = "max(" ++ (toUrlParam numbers) ++ ")"
     toUrlParam (Min numbers) = "min(" ++ (toUrlParam numbers) ++ ")"
     toUrlParam (NotBetween val first last) = (toUrlParam val) ++ " not between " ++ (toUrlParam first) ++ " and " ++ (toUrlParam last)
-    toUrlParam (NotIn element values) = (toUrlParam element) ++ " not in(" ++ commaSeperated (map toUrlParam values) ++ ")"
+    toUrlParam (NotIn element values) = (toUrlParam element) ++ " not in(" ++ (commaSeperated (map toUrlParam values)) ++ ")"
     toUrlParam (NotLike textA textB) =  (toUrlParam textA) ++ " not like " ++ (toUrlParam textB)
     toUrlParam (NumPoints points) = "num_points(" ++ (toUrlParam points) ++ ")"
     toUrlParam (Simplify geometry tolerance) = "simplify(" ++ (toUrlParam geometry) ++ ", " ++ (toUrlParam tolerance) ++ ")"
     toUrlParam (SimplifyPreserveTopology geometry tolerance) = "simplify_preserve_topology(" ++ (toUrlParam geometry) ++ ", " ++ (toUrlParam tolerance) ++ ")"
     toUrlParam (StartsWith haystack needle) = "starts_with(" ++ (toUrlParam haystack) ++ ", " ++ (toUrlParam needle) ++ ")"
-    toUrlParam (StdDevPop 
-    toUrlParam (StdDevSamp 
-    toUrlParam (Sum 
-    toUrlParam (Upper 
-    toUrlParam (WithinBox 
-    toUrlParam (WithinCircle 
-    toUrlParam (WithinPolygon 
+    toUrlParam (StdDevPop nums) = "stddev_pop(" ++ (toUrlParam nms) ++ ")"
+    toUrlParam (StdDevSamp nums) = "stddev_samp(" ++ (toUrlParam nums) ++ ")"
+    toUrlParam (Sum nums) = "sum(" ++ (toUrlParam nums) ++ ")"
+    toUrlParam (Upper text) = "upper(" ++ (toUrlParam text) ++ ")"
+    toUrlParam (WithinBox point nwLat nwLong seLat seLong) = "whithin_box(" ++ (commaSeperated (map toUrlParam [point, nwLat, nwLong, seLat, seLong])) ++ ")"
+    toUrlParam (WithinCircle point centerLat centerLong radius) = "whithin_circle(" ++ (commaSeperated (map toUrlParam [point, centerLat, centerLong, radius])) ++ ")"
+    toUrlParam (WithinPolygon point multipolygon) = "within_polygon(" ++ (toUrlParam point) ++ ", " ++ (toUrlParam multipolygon) ++ ")"
 
 -- This is going to take a while.
 --instance SodaExpr (SodaFunc sodatype) where
