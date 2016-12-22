@@ -2,10 +2,12 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Datatypes
-    ( SodaExpr
+    ( SodaExpr (toUrlParam)
     , SodaTypes
     , SodaTypeBox
-    , Column
+    , Column (Column)
+    , SodaVal (SodaVal)
+    , SodaFunc (..)
     ) where
 
 import Data.List
@@ -19,43 +21,31 @@ SODA datatypes
 Geographic values displayed plainly (like in a simple filter or where clause comparison) is displayed in Well-known Text (WKT).
  -}
 
- {-
-  - Have to make sure that the URL parameter serializations use the correct characters when serialization (like $ isn't confused with a parameter).
-  -
-  - I could make some of my own functions that use the SoQL functions as well.
-  -
-  - Might need to have the numeric types be flexible enough to interact with eachother.
-  -}
+{- Notes:
+ -}
 
 -- Improve
 type UParam = String
 
+-- Maybe make an exportable super or sub typeclass so they can use toUrlParam but can't create any instances of type.
 class SodaExpr m where
     toUrlParam :: m a -> UParam
 
--- I think I actually want the toUrlPart to be a function on Expr
 class SodaTypes sodatype where
     toUrlPart :: sodatype -> UParam
 
--- Perhaps need to restrict this further whereever this is used to exclude things like whitespace. Not sure if should do at value or type level.
 data Column sodatype where
     Column :: (SodaTypes sodatype) => String -> Column sodatype
 
 instance SodaExpr Column where
     toUrlParam (Column name) = name
 
--- Numbers, Doubles, and Moneys are numeric types that can interact. Might need to make an instance of numeric or a custom typeclass if I don't want them interacting with other types.
-
--- Currently flawed in a few ways. Might be good to get a basic version working though and improving from there.
--- Will need to test these type constraints further.
--- Even if I have to refactor/redesign this, documenting their types is useful.
 data SodaVal datatype where
     SodaVal :: SodaTypes a => a -> SodaVal a
 
 instance SodaExpr SodaVal where
     toUrlParam (SodaVal val) = toUrlPart val
 
--- Maybe make more descriptive types later.
 -- Would some more dependent type features have made this simpler?
 data SodaFunc datatype where
     Avg :: SodaTypes a => Column a -> SodaFunc Number -- Aggregate
@@ -102,7 +92,6 @@ scoper SodaFunc a = "(" ++ (toUrlParam (SodaFunc a) ++ ")"
 scoper = toUrlParam
 -}
 
--- Should the capitalization be consistant?
 instance SodaExpr SodaFunc where
     toUrlParam (Avg col) = "avg(" ++ (toUrlParam col) ++ ")"
     toUrlParam (Between val first last) = (toUrlParam val) ++ " between " ++ (toUrlParam first) ++ " and " ++ (toUrlParam last)
@@ -135,11 +124,6 @@ instance SodaExpr SodaFunc where
     toUrlParam (WithinCircle point centerLat centerLong radius) = "whithin_circle(" ++ (toUrlParam point) ++ (toUrlParam centerLat) ++ (toUrlParam centerLong) ++ (toUrlParam radius) ++ ")"
     toUrlParam (WithinPolygon point multipolygon) = "within_polygon(" ++ (toUrlParam point) ++ ", " ++ (toUrlParam multipolygon) ++ ")"
 
--- This is going to take a while.
---instance SodaExpr (SodaFunc sodatype) where
-
--- Some of these might have conflicting names.
--- Sort of want an implicit bool type as well, but it's a bit tricky to implement
 -- |Corresponds to ternary valued values with Nothing as null.
 type Checkbox = Maybe Bool
 instance SodaTypes (Maybe Bool) where
@@ -147,22 +131,17 @@ instance SodaTypes (Maybe Bool) where
     toUrlPart (Just True) = "true"
     toUrlPart (Just False) = "false"
 
--- Not sure if money is just fixed precision or more complicated. Round until I find a way to use a better type.
--- If we're just talking about US dollars, I suppose I could record as an integer of cents.
 newtype Money = Money { getMoney :: Double } deriving (Show)
 instance SodaTypes Money where
     toUrlPart m = show m
 
--- Maybe make these be not empty.
 instance SodaTypes Double where
     toUrlPart d = show d
 
--- Eventually replace with a better type. Look at the numbers package
 newtype Number = Number { getNumber :: Double } deriving (Show)
 instance SodaTypes Number where
     toUrlPart n = show $ getNumber n
 
--- TODO Escape single quotes.
 -- |The name inconsistancy is to prevent inconsistancies with the popular Text type.
 type SodaText = String
 instance SodaTypes SodaText where
@@ -203,7 +182,6 @@ pointsUPart points = "(" ++ (commaSeperated $ map pointUPart points) ++ ")"
     
 
 -- This has an alternate WKT format. Have to test it out.
--- TODO check if 
 type MultiPoint = [Point]
 instance SodaTypes MultiPoint where
     toUrlPart points = "'MULTIPOINT " ++ (pointsUPart points) ++ "'"
@@ -215,7 +193,6 @@ data USAddress = USAddress { address :: String
                            , zip     :: String
                            }
 
--- Should really require one of these not to be Nothing, but can put that restriction in the smart constructor.
 -- Use record syntax?
 -- One of the developers said on stack overflow that there is no representation for location types in things like a simple filter.
 -- |According to the SODA documentation, location is a legacy datatype so it is discouraged from being used and some SODA functions available for the point datatype are not available for the location datatype.

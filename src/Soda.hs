@@ -25,32 +25,15 @@ import Query
 
 {- #Notes
 
-- Might want to make parts more complex than type synonyms.
-
 - Might want to provide a way to replace any non-string piece of the query with a string just to make it more flexible
     - Also might want to be able to return it in several data types as well.
 
-- Mention that I'd also potentially like to make a servant version, but that I would have to learn more about type-level programming.
-
-- Have ways to change the return string format as well as whether it is given as a string type or a more native format.
-    - Should it just give it as a string and the user parses it into a native type/format or should I include things to automatically convert it?
-    - Maybe I'll put it in eventually, but for now just return as string.
-
-- There's lots of little things to consider like aliases as well.
+- (Look at other SODA libraries to get ideas)
 
 ##todo
 
-- Create consumer API - in process
-- Create producer API
-- Add authentication and API token abilities.
-- (Look at other SODA libraries to get ideas)
-- Have it be able receive different files types using the right types.
-- Eventually take advantage of http manager and connections.
 - Handle metadata and other data
-- Handle error responses
 - Have some way to run raw queries and turn complete or partial EDSL queries into raw queries.
-- Not sure if I want to use String, Text, Bytestring, etc. Decide eventually.
-- Figure out how to get info out in JSON, XML, and other types. JSON was a little more complicated than I had expected.
  -}
 
 type Endpoint      = String
@@ -62,7 +45,6 @@ type DatasetID     = String
 -- Have this affect the mime type?
 data ResponseFormat = CSV | GeoJSON | JSON | RDFXML | XML
 
--- Should it maybe put the dot in front? Perhaps make it part of Show?
 formatToUrl :: ResponseFormat -> String
 formatToUrl CSV     = "csv"
 formatToUrl GeoJSON = "geojson"
