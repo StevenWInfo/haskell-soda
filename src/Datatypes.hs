@@ -8,6 +8,7 @@ module Datatypes
     , Column (Column)
     , SodaVal (SodaVal)
     , SodaFunc (..)
+    , Checkbox
     ) where
 
 import Data.List

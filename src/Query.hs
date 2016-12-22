@@ -2,9 +2,17 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Query
-    ( 
+    ( Query (..)
+    , defaultQuery
+    , queryToUrlParameters
+    , Filter (Filter)
+    --, addFilter
+    , addFilters
+    , (===)
     ) where
 
+import Data.Function ((&))
+import Data.List
 import Data.Time.Calendar
 import Data.Time.Clock
 import Datatypes
@@ -17,7 +25,8 @@ Elements which make SoQL and other parts of identifying what data you want easie
 -}
 
 -- Could change content in the future because we can enforce it to follow the given datatypes
-type Content = String
+-- Easily confusable with UParam
+type UrlParam = String
 
 -- |Placeholder for more complex type later
 type Predicate = String
@@ -29,6 +38,7 @@ data Sorting = ASC | DESC
 
 -- Could possibly be confused with Ord class.
 -- Fix this.
+-- Either do this with using an existential type, or make itself as an existential type (using an existential type actually seems easier).
 data Order = Order (Column SodaTypeBox) Sorting
 
 -- |A SODA simple filter as an existential type (to fit into the query type cleanly).
@@ -36,11 +46,16 @@ data Filter where
     Filter :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
 
 -- Selects are a little trickier than just strings. Have to be able to mix with certain functions and things as well as aliases.
+-- Maybe type synonym for a list of existential types that are of the SodaExpr type.
 type Select = String
 
-type Where = String
+-- Should maybe use the bool SodaType
+data Where where
+    Where :: (SodaExpr m) => m Checkbox -> Where
 
-type Having = String
+-- Not sure if this should differ much from where. Probably have to determine if aggregated at run time.
+data Having where
+    Having :: (SodaExpr m) => m Checkbox -> Having
 
 -- Possibly confusion with the mathematical concept of a group
 data GroupElem where
@@ -51,47 +66,87 @@ data GroupElem where
 -- Don't export constructor
 -- Either have maybes for all of these or have an empty indicator for all types.
 -- Custom datatypes for some of these
-data Query = Query { filters  :: [Filter] -- Type with columns and contents
-                   , selects  :: [Select]
-                   , wheres   :: Where -- Is the lowercase where allowed?
+data Query = Query { filters  :: Maybe [Filter] -- Type with columns and contents
+                   , selects  :: Maybe [Select]
+                   , wheres   :: Maybe Where -- Is the lowercase where allowed?
                    , order    :: Maybe Order
-                   , group    :: [GroupElem] -- Depends on the select clause. Also, might need an existential type.
-                   , having   :: Having -- Depends on the group clause. Similar to where clause.
-                   , limit    :: NonNegative
-                   , offset   :: NonNegative
-                   , search   :: String -- |$q parameter
+                   , groups   :: Maybe [GroupElem] -- Depends on the select clause. Also, might need an existential type.
+                   , having   :: Maybe Having -- Depends on the group clause. Similar to where clause.
+                   , limit    :: Maybe NonNegative
+                   , offset   :: Maybe NonNegative
+                   , search   :: Maybe String -- |$q parameter
                    , subquery :: Maybe Query
-                   , bom      :: Bool
+                   , bom      :: Maybe Bool
                    }
 
 defaultQuery :: Query
-defaultQuery = Query { filters  = []
-                     , selects  = []
-                     , wheres   = ""
+defaultQuery = Query { filters  = Nothing
+                     , selects  = Nothing
+                     , wheres   = Nothing
                      , order    = Nothing
-                     , group    = [] :: [GroupElem]
-                     , having   = ""
-                     , limit    = 1000
-                     , offset   = 0
-                     , search   = ""
+                     , groups   = Nothing
+                     , having   = Nothing
+                     , limit    = Nothing
+                     , offset   = Nothing
+                     , search   = Nothing
                      , subquery = Nothing
-                     , bom      = False
+                     , bom      = Nothing
                      }
 
-{-
-queryToUrlParameters :: Query -> String
-queryToUrlParameters query = filters'
-    where filters' = filtersToUrlParameters (filters query)
+-- I don't know if changing ifExists order would make it more performant
+-- Intercalculate with ampersands.
+queryToUrlParameters :: Query -> UrlParam
+queryToUrlParameters query = intercalate "&" $ filter (=="") params
+    where params    = [filters', limit', offset', search', bom']
+          filters'  = ifExists filtersToUrlParameters $ filters query
+          {-
+          selects'  = ifExists selectsToParam $ selects query
+          wheres'   = ifExists wheresToParam $ wheres query
+          order'    = ifExists orderToParam $ order query
+          groups'   = ifExists groupsToParam $ groups query
+          having'   = ifExists havingToParam $ having query
+          subquery' = ifExists subqueryToParam $ subquery query
+           -}
+          limit'    = ifExists limitToParam $ limit query
+          offset'   = ifExists offsetToParam $ offset query
+          search'   = ifExists searchToParam $ search query
+          bom'      = ifExists bomToParam $ bom query
+          ifExists f Nothing = ""
+          ifExists f (Just a)  = f a
 
 -- It's weird to take the head as the initial value with foldr, but order doesn't matter and I'm guessing this is more efficient.
 filtersToUrlParameters :: [Filter] -> String
 filtersToUrlParameters [] = ""
-filtersToUrlParameters (first:filters') = foldr addFilter (filterToUrlParameter first) filters'
-    addFilter filt accum = accum ++ " " ++ (filterToUrlParameter filt)
+filtersToUrlParameters (first:filters') = foldl' addFilter (filterToUrlParameter first) filters'
+    where addFilter accum filt = accum ++ "&" ++ (filterToUrlParameter filt)
 
 filterToUrlParameter :: Filter -> String
-filterToUrlParameter (Filter (Column name) (SodaVal val)) = 
--}
+filterToUrlParameter (Filter col val) = (toUrlParam col) ++ "=" ++ (toUrlParam val)
+
+limitToParam :: NonNegative -> UrlParam
+limitToParam limit = "$limit=" ++ (show limit)
+
+offsetToParam :: NonNegative -> UrlParam
+offsetToParam offset = "$offset=" ++ (show offset)
+
+searchToParam :: String -> UrlParam
+searchToParam search = "$q=" ++ search
+
+-- subqueryToParam actually can't be a recursive call to queryToUrlParameters because subqueries are represented differently. Within the subquery I think you can make a recursive call though.
+
+bomToParam :: Bool -> UrlParam
+bomToParam True = "$$bom=true"
+bomToParam False = "$$bom=false"
+
+-- Helpful to use with Data.Function.(&)
+addFilters :: [Filter] -> Query -> Query
+addFilters filters' query = query { filters = Just $ (filterList query) ++ filters' }
+    where filterList (Query { filters = Nothing }) = []
+          filterList (Query { filters = (Just filt)}) = filt
+
+infix 2 ===
+(===) :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
+(===) = Filter
 
 {-
 limit :: Int -> Maybe Query
