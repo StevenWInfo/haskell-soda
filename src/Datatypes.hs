@@ -10,7 +10,7 @@ module Datatypes
     , SodaFunc (..)
     , Checkbox
     , SodaText
-    , Number
+    , Number (Number)
     ) where
 
 import Data.List

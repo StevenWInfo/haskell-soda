@@ -7,6 +7,10 @@ module Query
     , queryToParam
     , Filter (Filter)
     , replaceFilters
+    , replaceLimit
+    , replaceOffset
+    , replaceSearch
+    , replaceBom
     , (===)
     ) where
 
@@ -21,14 +25,12 @@ Elements which make SoQL and other parts of identifying what data you want easie
  -}
 
 {- #Notes:
+ - The replaceFoo names make sense, but don't make for a very good interface.
  -}
 
 -- Could change content in the future because we can enforce it to follow the given datatypes
 -- Easily confusable with UParam
 type UrlParam = String
-
--- |Placeholder for more complex type later
-type Predicate = String
 
 -- Obviously completely untrue, but I'll use it to keep track of where I want it to be true.
 type NonNegative = Int
@@ -141,6 +143,22 @@ bomToParam False = "$$bom=false"
 replaceFilters :: [Filter] -> Query -> Query
 replaceFilters filters' query = query { filters = (Just filters') }
 
+-- Maybe a good place to enforce non-negative
+replaceLimit :: NonNegative -> Query -> Query
+replaceLimit limit' query = query { limit = (Just limit') }
+
+-- Maybe a good place to enforce non-negative
+replaceOffset :: NonNegative -> Query -> Query
+replaceOffset offset' query = query { offset = (Just offset') }
+
+replaceSearch :: String -> Query -> Query
+replaceSearch search' query = query { search = (Just search') }
+
+replaceBom :: Bool -> Query -> Query
+replaceBom bom' query = query { bom = (Just bom') }
+
+-- This operator might look too generic. Maybe make it look more specific for filters.
+-- Also might be confusing because later might introduce one for equality comparisons in where and having.
 infix 2 ===
 (===) :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
 (===) = Filter
@@ -155,21 +173,6 @@ offset :: Int -> Maybe Query
 offset int
     | int < 0 = Nothing
     | otherwise = Just (Offset int)
--}
-
-{-
--- Need to figure out better naming
-combineQ :: QueryInfo -> QueryInfo -> Either QueryError QueryInfo
-combineQ (QueryInfo q1 qi1) (QueryInfo q2 qi2) = case combineQI qi1 qi2 of
-                                                     Right qi -> Right (QueryInfo (Combine q1 q2) qi)
-                                                     Left qe -> Left qe
-
--- There has got to be a simpler way of writing this (that's still extensible).
--- |If there are multiple errors, this currently only returns the first one it finds. Eventually I'd like it to return all errors.
-combineQI :: QueryMeta -> QueryMeta -> Either QueryError QueryMeta
-combineQI qm1 qm2 = do
-    isWhere <- whereCheck qm1 qm2
-    return (QueryMeta { whereExists = isWhere })
 -}
 
 -- This might be a monoid? Also, make a show instance for it.
