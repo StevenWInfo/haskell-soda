@@ -19,11 +19,11 @@ The types that I've set up have corrected several incorrect tests that I've made
 tests :: TestTree
 tests = testGroup "Query Tests"
     [ testCase "Smoke test for query" $
-        queryToParam defaultQuery @?= ""
+        queryToParam emptyQuery @?= ""
     , testCase "Basic filter query test" $
-        (queryToParam $ defaultQuery & addFilters [ colFoo === (SodaVal "Bar") ]) @?= "Foo='Bar'"
+        (queryToParam $ emptyQuery & replaceFilters [ colFoo === (SodaVal "Bar") ]) @?= "Foo='Bar'"
     , testCase "Filter query test with a Soda Function." $
-        (queryToParam $ defaultQuery & addFilters [ colFoo === avgCol ]) @?= "Foo='Bar'"
+        (queryToParam $ emptyQuery & replaceFilters [ numCol === avgCol ]) @?= "Num=avg(Baz)"
     ]
     where colFoo = Column "Foo" :: Column SodaText
           numCol = Column "Num" :: Column Number

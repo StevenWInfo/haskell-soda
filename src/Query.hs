@@ -3,11 +3,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Query
     ( Query (..)
-    , defaultQuery
+    , emptyQuery
     , queryToParam
     , Filter (Filter)
-    --, addFilter
-    , addFilters
+    , replaceFilters
     , (===)
     ) where
 
@@ -22,7 +21,7 @@ Elements which make SoQL and other parts of identifying what data you want easie
  -}
 
 {- #Notes:
--}
+ -}
 
 -- Could change content in the future because we can enforce it to follow the given datatypes
 -- Easily confusable with UParam
@@ -79,8 +78,8 @@ data Query = Query { filters  :: Maybe [Filter] -- Type with columns and content
                    , bom      :: Maybe Bool
                    }
 
-defaultQuery :: Query
-defaultQuery = Query { filters  = Nothing
+emptyQuery :: Query
+emptyQuery = Query { filters  = Nothing
                      , selects  = Nothing
                      , wheres   = Nothing
                      , order    = Nothing
@@ -117,8 +116,8 @@ queryToParam query = intercalate "&" $ filter (/="") params
 -- It's weird to take the head as the initial value with foldr, but order doesn't matter and I'm guessing this is more efficient.
 filtersToUrlParameters :: [Filter] -> String
 filtersToUrlParameters [] = ""
-filtersToUrlParameters (first:filters') = foldl' addFilter (filterToUrlParameter first) filters'
-    where addFilter accum filt = accum ++ "&" ++ (filterToUrlParameter filt)
+filtersToUrlParameters (first:filters') = foldl' replaceFilters (filterToUrlParameter first) filters'
+    where replaceFilters accum filt = accum ++ "&" ++ (filterToUrlParameter filt)
 
 filterToUrlParameter :: Filter -> String
 filterToUrlParameter (Filter col val) = (toUrlParam col) ++ "=" ++ (toUrlParam val)
@@ -138,11 +137,9 @@ bomToParam :: Bool -> UrlParam
 bomToParam True = "$$bom=true"
 bomToParam False = "$$bom=false"
 
--- Helpful to use with Data.Function.(&)
-addFilters :: [Filter] -> Query -> Query
-addFilters filters' query = query { filters = Just $ (filterList query) ++ filters' }
-    where filterList (Query { filters = Nothing }) = []
-          filterList (Query { filters = (Just filt)}) = filt
+-- |Helpful to use with Data.Function.(&)
+replaceFilters :: [Filter] -> Query -> Query
+replaceFilters filters' query = query { filters = (Just filters') }
 
 infix 2 ===
 (===) :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
