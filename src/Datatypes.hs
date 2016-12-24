@@ -9,6 +9,8 @@ module Datatypes
     , SodaVal (SodaVal)
     , SodaFunc (..)
     , Checkbox
+    , SodaText
+    , Number
     ) where
 
 import Data.List

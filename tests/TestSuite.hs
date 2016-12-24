@@ -14,15 +14,17 @@ import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Types.Status as Status
 import Control.Exception
 
+import qualified QueryTests
+
 {-
  - Break this into multiple files soon.
  -}
 
 main :: IO ()
-main = do
-    defaultMain tests
-
-tests = testGroup "Tests" [unitTests]
+main = defaultMain $ testGroup "haskell-soda" 
+    [ unitTests
+    , QueryTests.tests
+    ]
 
 -- The test that actually queries isn't a great test because it will fail if the dataset changes, but it's useful now.
 unitTests = testGroup "Unit tests"

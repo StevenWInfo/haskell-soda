@@ -4,7 +4,7 @@
 module Query
     ( Query (..)
     , defaultQuery
-    , queryToUrlParameters
+    , queryToParam
     , Filter (Filter)
     --, addFilter
     , addFilters
@@ -95,8 +95,8 @@ defaultQuery = Query { filters  = Nothing
 
 -- I don't know if changing ifExists order would make it more performant
 -- Intercalculate with ampersands.
-queryToUrlParameters :: Query -> UrlParam
-queryToUrlParameters query = intercalate "&" $ filter (=="") params
+queryToParam :: Query -> UrlParam
+queryToParam query = intercalate "&" $ filter (/="") params
     where params    = [filters', limit', offset', search', bom']
           filters'  = ifExists filtersToUrlParameters $ filters query
           {-
@@ -132,7 +132,7 @@ offsetToParam offset = "$offset=" ++ (show offset)
 searchToParam :: String -> UrlParam
 searchToParam search = "$q=" ++ search
 
--- subqueryToParam actually can't be a recursive call to queryToUrlParameters because subqueries are represented differently. Within the subquery I think you can make a recursive call though.
+-- subqueryToParam actually can't be a recursive call to queryToParam because subqueries are represented differently. Within the subquery I think you can make a recursive call though.
 
 bomToParam :: Bool -> UrlParam
 bomToParam True = "$$bom=true"
