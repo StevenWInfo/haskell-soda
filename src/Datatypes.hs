@@ -11,6 +11,7 @@ module Datatypes
     , Checkbox
     , SodaText
     , Number (Number)
+    , Point (Point)
     ) where
 
 import Data.List

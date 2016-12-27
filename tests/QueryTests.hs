@@ -32,6 +32,17 @@ tests = testGroup "Query Tests"
             & replaceSearch "Hello, world"
             & replaceBom True
         ) @?= "Num=5.0&$limit=10&$offset=5&$q=Hello, world&$$bom=true"
+    , testCase "Testing select parameter building." $
+        (queryToParam $ emptyQuery & replaceSelects [ Select colFoo, Alias numCol "NumAlias" ]) @?= "$select=Foo, Num as NumAlias"
+    , testCase "Testing all query parts." $
+        (queryToParam $ emptyQuery
+            & replaceFilters [ numCol === (SodaVal (Number 5.0)) ]
+            & replaceLimit 10
+            & replaceSelects [ Select numCol, Alias avgCol "average"]
+            & replaceOffset 5
+            & replaceSearch "Hello, world"
+            & replaceBom True
+        ) @?= "Num=5.0&$select=Num, avg(Baz) as average&$limit=10&$offset=5&$q=Hello, world&$$bom=true"
     ]
     where colFoo = Column "Foo" :: Column SodaText
           numCol = Column "Num" :: Column Number

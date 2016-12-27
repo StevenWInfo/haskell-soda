@@ -6,12 +6,15 @@ module Query
     , emptyQuery
     , queryToParam
     , Filter (Filter)
+    , Select (Select, Alias)
     , replaceFilters
+    , replaceSelects
     , replaceLimit
     , replaceOffset
     , replaceSearch
     , replaceBom
     , (===)
+    , selectsToParam
     ) where
 
 import Data.Function ((&))
@@ -26,6 +29,10 @@ Elements which make SoQL and other parts of identifying what data you want easie
 
 {- #Notes:
  - The replaceFoo names make sense, but don't make for a very good interface.
+ -
+ - The toParam and replace stuff could be part of a typeclass.
+ -
+ - I have the column type, but I suppose we could have aliases which aren't columns, but aren't concrete values.
  -}
 
 -- Could change content in the future because we can enforce it to follow the given datatypes
@@ -48,7 +55,9 @@ data Filter where
 
 -- Selects are a little trickier than just strings. Have to be able to mix with certain functions and things as well as aliases.
 -- Maybe type synonym for a list of existential types that are of the SodaExpr type.
-type Select = String
+data Select where
+    Select :: (SodaExpr m, SodaTypes a) => m a -> Select
+    Alias  :: (SodaExpr m, SodaTypes a) => m a -> String -> Select
 
 -- Should maybe use the bool SodaType
 data Where where
@@ -95,13 +104,12 @@ emptyQuery = Query { filters  = Nothing
                      }
 
 -- I don't know if changing ifExists order would make it more performant
--- Intercalculate with ampersands.
 queryToParam :: Query -> UrlParam
 queryToParam query = intercalate "&" $ filter (/="") params
-    where params    = [filters', limit', offset', search', bom']
+    where params    = [filters', selects', limit', offset', search', bom']
           filters'  = ifExists filtersToUrlParameters $ filters query
-          {-
           selects'  = ifExists selectsToParam $ selects query
+          {-
           wheres'   = ifExists wheresToParam $ wheres query
           order'    = ifExists orderToParam $ order query
           groups'   = ifExists groupsToParam $ groups query
@@ -115,14 +123,20 @@ queryToParam query = intercalate "&" $ filter (/="") params
           ifExists f Nothing = ""
           ifExists f (Just a)  = f a
 
--- It's weird to take the head as the initial value with foldr, but order doesn't matter and I'm guessing this is more efficient.
-filtersToUrlParameters :: [Filter] -> String
+filtersToUrlParameters :: [Filter] -> UrlParam
 filtersToUrlParameters [] = ""
-filtersToUrlParameters (first:filters') = foldl' replaceFilters (filterToUrlParameter first) filters'
-    where replaceFilters accum filt = accum ++ "&" ++ (filterToUrlParameter filt)
+filtersToUrlParameters (first:filters') = foldl' intersperseFilters (filterToUrlParameter first) filters'
+    where intersperseFilters accum filt = accum ++ "&" ++ (filterToUrlParameter filt)
 
-filterToUrlParameter :: Filter -> String
+filterToUrlParameter :: Filter -> UrlParam
 filterToUrlParameter (Filter col val) = (toUrlParam col) ++ "=" ++ (toUrlParam val)
+
+selectsToParam :: [Select] -> UrlParam
+selectsToParam selects' = "$select=" ++ (intercalate ", " $ map selectToParam selects')
+
+selectToParam :: Select -> UrlParam
+selectToParam (Select col) = toUrlParam col
+selectToParam (Alias col alias) = (toUrlParam col) ++ " as " ++ alias
 
 limitToParam :: NonNegative -> UrlParam
 limitToParam limit = "$limit=" ++ (show limit)
@@ -142,6 +156,9 @@ bomToParam False = "$$bom=false"
 -- |Helpful to use with Data.Function.(&)
 replaceFilters :: [Filter] -> Query -> Query
 replaceFilters filters' query = query { filters = (Just filters') }
+
+replaceSelects :: [Select] -> Query -> Query
+replaceSelects selects' query = query { selects = (Just selects') }
 
 -- Maybe a good place to enforce non-negative
 replaceLimit :: NonNegative -> Query -> Query
