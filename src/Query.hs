@@ -7,8 +7,10 @@ module Query
     , queryToParam
     , Filter (Filter)
     , Select (Select, Alias)
+    , GroupElem (Groupify)
     , replaceFilters
     , replaceSelects
+    , replaceGroups
     , replaceLimit
     , replaceOffset
     , replaceSearch
@@ -106,13 +108,13 @@ emptyQuery = Query { filters  = Nothing
 -- I don't know if changing ifExists order would make it more performant
 queryToParam :: Query -> UrlParam
 queryToParam query = intercalate "&" $ filter (/="") params
-    where params    = [filters', selects', limit', offset', search', bom']
+    where params    = [filters', selects', groups', limit', offset', search', bom']
           filters'  = ifExists filtersToUrlParameters $ filters query
           selects'  = ifExists selectsToParam $ selects query
+          groups'   = ifExists groupsToParam $ groups query
           {-
           wheres'   = ifExists wheresToParam $ wheres query
           order'    = ifExists orderToParam $ order query
-          groups'   = ifExists groupsToParam $ groups query
           having'   = ifExists havingToParam $ having query
           subquery' = ifExists subqueryToParam $ subquery query
            -}
@@ -138,6 +140,12 @@ selectToParam :: Select -> UrlParam
 selectToParam (Select col) = toUrlParam col
 selectToParam (Alias col alias) = (toUrlParam col) ++ " as " ++ alias
 
+groupsToParam :: [GroupElem] -> UrlParam
+groupsToParam groups' = "$group=" ++ (intercalate ", " $ map groupToParam groups')
+
+groupToParam :: GroupElem -> UrlParam
+groupToParam (Groupify col) = toUrlParam col
+
 limitToParam :: NonNegative -> UrlParam
 limitToParam limit = "$limit=" ++ (show limit)
 
@@ -159,6 +167,9 @@ replaceFilters filters' query = query { filters = (Just filters') }
 
 replaceSelects :: [Select] -> Query -> Query
 replaceSelects selects' query = query { selects = (Just selects') }
+
+replaceGroups :: [GroupElem] -> Query -> Query
+replaceGroups groups' query = query { groups = (Just groups') }
 
 -- Maybe a good place to enforce non-negative
 replaceLimit :: NonNegative -> Query -> Query

@@ -34,6 +34,8 @@ tests = testGroup "Query Tests"
         ) @?= "Num=5.0&$limit=10&$offset=5&$q=Hello, world&$$bom=true"
     , testCase "Testing select parameter building." $
         (queryToParam $ emptyQuery & replaceSelects [ Select colFoo, Alias numCol "NumAlias" ]) @?= "$select=Foo, Num as NumAlias"
+    , testCase "Testing group parameter building." $
+        (queryToParam $ emptyQuery & replaceGroups [ Groupify colFoo, Groupify numCol ]) @?= "$group=Foo, Num"
     , testCase "Testing all query parts." $
         (queryToParam $ emptyQuery
             & replaceFilters [ numCol === (SodaVal (Number 5.0)) ]
