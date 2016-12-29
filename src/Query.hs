@@ -4,12 +4,16 @@
 module Query
     ( Query (..)
     , emptyQuery
-    , queryToParam
+    , queryToString
+    --, queryToParam
     , Filter (Filter)
     , Select (Select, Alias)
     , GroupElem (Groupify)
+    , Sorting (ASC, DESC)
+    , Order (Order)
     , replaceFilters
     , replaceSelects
+    , replaceOrders
     , replaceGroups
     , replaceLimit
     , replaceOffset
@@ -49,7 +53,8 @@ data Sorting = ASC | DESC
 -- Could possibly be confused with Ord class.
 -- Fix this.
 -- Either do this with using an existential type, or make itself as an existential type (using an existential type actually seems easier).
-data Order = Order (Column SodaTypeBox) Sorting
+data Order where
+    Order :: (SodaTypes a) => Column a -> Sorting -> Order
 
 -- |A SODA simple filter as an existential type (to fit into the query type cleanly).
 data Filter where
@@ -81,7 +86,7 @@ data GroupElem where
 data Query = Query { filters  :: Maybe [Filter] -- Type with columns and contents
                    , selects  :: Maybe [Select]
                    , wheres   :: Maybe Where -- Is the lowercase where allowed?
-                   , order    :: Maybe Order
+                   , orders   :: Maybe [Order]
                    , groups   :: Maybe [GroupElem] -- Depends on the select clause. Also, might need an existential type.
                    , having   :: Maybe Having -- Depends on the group clause. Similar to where clause.
                    , limit    :: Maybe NonNegative
@@ -95,7 +100,7 @@ emptyQuery :: Query
 emptyQuery = Query { filters  = Nothing
                      , selects  = Nothing
                      , wheres   = Nothing
-                     , order    = Nothing
+                     , orders   = Nothing
                      , groups   = Nothing
                      , having   = Nothing
                      , limit    = Nothing
@@ -105,16 +110,30 @@ emptyQuery = Query { filters  = Nothing
                      , bom      = Nothing
                      }
 
+-- This operator might look too generic. Maybe make it look more specific for filters.
+-- Also might be confusing because later might introduce one for equality comparisons in where and having.
+infix 2 ===
+(===) :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
+(===) = Filter
+
+-- This might be a monoid? Also, make a show instance for it.
+-- Need to figure out how this works.
+data QueryError = WhereError
+
+-- |
+-- = ToParam functions
+
 -- I don't know if changing ifExists order would make it more performant
-queryToParam :: Query -> UrlParam
-queryToParam query = intercalate "&" $ filter (/="") params
-    where params    = [filters', selects', groups', limit', offset', search', bom']
+-- Need to change up the namings of things.
+queryToString :: Query -> UrlParam
+queryToString query = intercalate "&" $ filter (/="") params
+    where params    = [filters', selects', order', groups', limit', offset', search', bom']
           filters'  = ifExists filtersToUrlParameters $ filters query
           selects'  = ifExists selectsToParam $ selects query
           groups'   = ifExists groupsToParam $ groups query
+          order'    = ifExists ordersToParam $ orders query
           {-
           wheres'   = ifExists wheresToParam $ wheres query
-          order'    = ifExists orderToParam $ order query
           having'   = ifExists havingToParam $ having query
           subquery' = ifExists subqueryToParam $ subquery query
            -}
@@ -124,6 +143,12 @@ queryToParam query = intercalate "&" $ filter (/="") params
           bom'      = ifExists bomToParam $ bom query
           ifExists f Nothing = ""
           ifExists f (Just a)  = f a
+
+--queryToParam :: Query -> [(String, String)]
+--queryToParam
+
+-- |
+-- == ToParam functions of the query parts
 
 filtersToUrlParameters :: [Filter] -> UrlParam
 filtersToUrlParameters [] = ""
@@ -139,6 +164,14 @@ selectsToParam selects' = "$select=" ++ (intercalate ", " $ map selectToParam se
 selectToParam :: Select -> UrlParam
 selectToParam (Select col) = toUrlParam col
 selectToParam (Alias col alias) = (toUrlParam col) ++ " as " ++ alias
+
+ordersToParam :: [Order] -> UrlParam
+ordersToParam order' = "$order=" ++ (intercalate ", " $ map orderToParam order')
+
+orderToParam :: Order -> UrlParam
+orderToParam (Order col sort) = toUrlParam col ++ " " ++ sortParam
+    where sortParam = case sort of ASC  -> "ASC"
+                                   DESC -> "DESC"
 
 groupsToParam :: [GroupElem] -> UrlParam
 groupsToParam groups' = "$group=" ++ (intercalate ", " $ map groupToParam groups')
@@ -161,12 +194,18 @@ bomToParam :: Bool -> UrlParam
 bomToParam True = "$$bom=true"
 bomToParam False = "$$bom=false"
 
+-- |
+-- = Replace functions
+
 -- |Helpful to use with Data.Function.(&)
 replaceFilters :: [Filter] -> Query -> Query
 replaceFilters filters' query = query { filters = (Just filters') }
 
 replaceSelects :: [Select] -> Query -> Query
 replaceSelects selects' query = query { selects = (Just selects') }
+
+replaceOrders :: [Order] -> Query -> Query
+replaceOrders orders' query = query { orders = (Just orders') }
 
 replaceGroups :: [GroupElem] -> Query -> Query
 replaceGroups groups' query = query { groups = (Just groups') }
@@ -185,12 +224,6 @@ replaceSearch search' query = query { search = (Just search') }
 replaceBom :: Bool -> Query -> Query
 replaceBom bom' query = query { bom = (Just bom') }
 
--- This operator might look too generic. Maybe make it look more specific for filters.
--- Also might be confusing because later might introduce one for equality comparisons in where and having.
-infix 2 ===
-(===) :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
-(===) = Filter
-
 {-
 limit :: Int -> Maybe Query
 limit int
@@ -202,10 +235,6 @@ offset int
     | int < 0 = Nothing
     | otherwise = Just (Offset int)
 -}
-
--- This might be a monoid? Also, make a show instance for it.
--- Need to figure out how this works.
-data QueryError = WhereError
 
 -- Paging functionality
 -- TODO
