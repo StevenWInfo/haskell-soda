@@ -11,14 +11,6 @@ module Query
     , GroupElem (Groupify)
     , Sorting (ASC, DESC)
     , Order (Order)
-    , replaceFilters
-    , replaceSelects
-    , replaceOrders
-    , replaceGroups
-    , replaceLimit
-    , replaceOffset
-    , replaceSearch
-    , replaceBom
     , (===)
     , selectsToParam
     ) where
@@ -178,36 +170,6 @@ searchToParam search' = [("$q", search')]
 bomToParam :: Bool -> [(String, String)]
 bomToParam True = [("$$bom", "true")]
 bomToParam False = [("$$bom", "false")]
-
--- |
--- = Replace functions
-
--- |Helpful to use with Data.Function.(&)
-replaceFilters :: [Filter] -> Query -> Query
-replaceFilters filters' query = query { filters = (Just filters') }
-
-replaceSelects :: [Select] -> Query -> Query
-replaceSelects selects' query = query { selects = (Just selects') }
-
-replaceOrders :: [Order] -> Query -> Query
-replaceOrders orders' query = query { orders = (Just orders') }
-
-replaceGroups :: [GroupElem] -> Query -> Query
-replaceGroups groups' query = query { groups = (Just groups') }
-
--- Maybe a good place to enforce non-negative
-replaceLimit :: NonNegative -> Query -> Query
-replaceLimit limit' query = query { limit = (Just limit') }
-
--- Maybe a good place to enforce non-negative
-replaceOffset :: NonNegative -> Query -> Query
-replaceOffset offset' query = query { offset = (Just offset') }
-
-replaceSearch :: String -> Query -> Query
-replaceSearch search' query = query { search = (Just search') }
-
-replaceBom :: Bool -> Query -> Query
-replaceBom bom' query = query { bom = (Just bom') }
 
 {-
 limit :: Int -> Maybe Query

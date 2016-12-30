@@ -5,9 +5,11 @@ This library is designed to put many of the specifications of SODA into the type
 
 You'll hopefully use this library somewhat like an Embedded Domain Specific Language (EDSL). I'm not entirely sure what qualifies as an EDSL, though, and it's mostly based on SODA/SoQL anyways.
 
-These bindings are nowhere near to complete yet, so you can't actually make any calls with it yet. It will also probably be quite a while until it is ready for use in any sort of production environment. That could be sped up, though, if some generous Haskell programmers are willing to help out.
+These bindings are nowhere near to complete yet, so you can't actually make any calls with it yet. It will also probably be quite a while until it is ready for use in any sort of production environment. That could be sped up with some help, though!
 
-This is my first large Haskell project, so any suggestions or pull requests are more than welcome.
+The bindings are currently designed for the 2.1 version of the SODA.
+
+I'm still pretty new to creating larger projects with Haskell, so any suggestions or pull requests are more than welcome.
 
 ##Documentation
 
