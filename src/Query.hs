@@ -5,7 +5,7 @@ module Query
     ( Query (..)
     , emptyQuery
     , queryToString
-    --, queryToParam
+    , queryToParam
     , Filter (Filter)
     , Select (Select, Alias)
     , GroupElem (Groupify)

@@ -30,8 +30,8 @@ test-suite haskell-soda-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      tests
   main-is:             TestSuite.hs
-  other-modules:
-    QueryTests
+  other-modules:       QueryTests
+                     , SodaTests
   build-depends:       tasty
                      --, Quickcheck
                      --, HUnit
