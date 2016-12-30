@@ -126,73 +126,58 @@ data QueryError = WhereError
 -- I don't know if changing ifExists order would make it more performant
 -- Need to change up the namings of things.
 queryToString :: Query -> UrlParam
-queryToString query = intercalate "&" $ filter (/="") params
-    where params    = [filters', selects', order', groups', limit', offset', search', bom']
-          filters'  = ifExists filtersToUrlParameters $ filters query
-          selects'  = ifExists selectsToParam $ selects query
-          groups'   = ifExists groupsToParam $ groups query
-          order'    = ifExists ordersToParam $ orders query
-          {-
-          wheres'   = ifExists wheresToParam $ wheres query
-          having'   = ifExists havingToParam $ having query
-          subquery' = ifExists subqueryToParam $ subquery query
-           -}
-          limit'    = ifExists limitToParam $ limit query
-          offset'   = ifExists offsetToParam $ offset query
-          search'   = ifExists searchToParam $ search query
-          bom'      = ifExists bomToParam $ bom query
-          ifExists f Nothing = ""
+queryToString query = intercalate "&" $ map stringify (queryToParam query)
+    where stringify (param, val) = param ++ "=" ++ val
+
+queryToParam :: Query -> [(String, String)]
+queryToParam query = filters' ++ selects' ++ orders' ++ groups' ++ limit' ++ offset' ++ search' ++ bom'
+    where filters' = ifExists filtersToParam $ filters query
+          selects' = ifExists selectsToParam $ selects query
+          groups'  = ifExists groupsToParam  $ groups  query
+          orders'  = ifExists ordersToParam  $ orders  query
+          limit'   = ifExists limitToParam   $ limit   query
+          offset'  = ifExists offsetToParam  $ offset  query
+          search'  = ifExists searchToParam  $ search  query
+          bom'     = ifExists bomToParam     $ bom     query
+          ifExists f Nothing = []
           ifExists f (Just a)  = f a
 
---queryToParam :: Query -> [(String, String)]
---queryToParam
+-- subqueryToParam actually can't be a recursive call to queryToParam because subqueries are represented differently. Within the subquery I think you can make a recursive call though.
 
 -- |
 -- == ToParam functions of the query parts
 
-filtersToUrlParameters :: [Filter] -> UrlParam
-filtersToUrlParameters [] = ""
-filtersToUrlParameters (first:filters') = foldl' intersperseFilters (filterToUrlParameter first) filters'
-    where intersperseFilters accum filt = accum ++ "&" ++ (filterToUrlParameter filt)
+filtersToParam :: [Filter] -> [(String, String)]
+filtersToParam filters' = map filterToParam filters'
+    where filterToParam (Filter col val) = ((toUrlParam col), (toUrlParam val))
 
-filterToUrlParameter :: Filter -> UrlParam
-filterToUrlParameter (Filter col val) = (toUrlParam col) ++ "=" ++ (toUrlParam val)
+selectsToParam :: [Select] -> [(String, String)]
+selectsToParam selects' = [("$select", intercalate ", " $ map selectToParam selects')]
+    where selectToParam (Select col) = toUrlParam col
+          selectToParam (Alias col alias) = (toUrlParam col) ++ " as " ++ alias
 
-selectsToParam :: [Select] -> UrlParam
-selectsToParam selects' = "$select=" ++ (intercalate ", " $ map selectToParam selects')
+ordersToParam :: [Order] -> [(String, String)]
+ordersToParam orders' = [("$order", intercalate ", " $ map orderToParam orders')]
+    where orderToParam (Order col sort) = toUrlParam col ++ " " ++ sortParam sort
+          sortParam ASC  = "ASC"
+          sortParam DESC = "DESC"
 
-selectToParam :: Select -> UrlParam
-selectToParam (Select col) = toUrlParam col
-selectToParam (Alias col alias) = (toUrlParam col) ++ " as " ++ alias
+groupsToParam :: [GroupElem] -> [(String, String)]
+groupsToParam groups' = [("$group", intercalate ", " $ map groupToParam groups')]
+    where groupToParam (Groupify col) = toUrlParam col
 
-ordersToParam :: [Order] -> UrlParam
-ordersToParam order' = "$order=" ++ (intercalate ", " $ map orderToParam order')
+limitToParam :: NonNegative -> [(String, String)]
+limitToParam limit' = [("$limit", show limit')]
 
-orderToParam :: Order -> UrlParam
-orderToParam (Order col sort) = toUrlParam col ++ " " ++ sortParam
-    where sortParam = case sort of ASC  -> "ASC"
-                                   DESC -> "DESC"
+offsetToParam :: NonNegative -> [(String, String)]
+offsetToParam offset' = [("$offset", show offset')]
 
-groupsToParam :: [GroupElem] -> UrlParam
-groupsToParam groups' = "$group=" ++ (intercalate ", " $ map groupToParam groups')
+searchToParam :: String -> [(String, String)]
+searchToParam search' = [("$q", search')]
 
-groupToParam :: GroupElem -> UrlParam
-groupToParam (Groupify col) = toUrlParam col
-
-limitToParam :: NonNegative -> UrlParam
-limitToParam limit = "$limit=" ++ (show limit)
-
-offsetToParam :: NonNegative -> UrlParam
-offsetToParam offset = "$offset=" ++ (show offset)
-
-searchToParam :: String -> UrlParam
-searchToParam search = "$q=" ++ search
-
--- subqueryToParam actually can't be a recursive call to queryToParam because subqueries are represented differently. Within the subquery I think you can make a recursive call though.
-
-bomToParam :: Bool -> UrlParam
-bomToParam True = "$$bom=true"
-bomToParam False = "$$bom=false"
+bomToParam :: Bool -> [(String, String)]
+bomToParam True = [("$$bom", "true")]
+bomToParam False = [("$$bom", "false")]
 
 -- |
 -- = Replace functions

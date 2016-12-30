@@ -30,6 +30,8 @@ import Query
 
 - (Look at other SODA libraries to get ideas)
 
+- May want to rename this to network or something.
+
 ##todo
 
 - Handle metadata and other data
