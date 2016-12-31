@@ -20,6 +20,7 @@ import Data.List
 import Data.Time.Calendar
 import Data.Time.Clock
 import Datatypes
+import SodaFunctions
 
 {-|
 Elements which make SoQL and other parts of identifying what data you want easier.
@@ -32,10 +33,6 @@ Elements which make SoQL and other parts of identifying what data you want easie
  -
  - I have the column type, but I suppose we could have aliases which aren't columns, but aren't concrete values.
  -}
-
--- Could change content in the future because we can enforce it to follow the given datatypes
--- Easily confusable with UParam
-type UrlParam = String
 
 -- Obviously completely untrue, but I'll use it to keep track of where I want it to be true.
 type NonNegative = Int
@@ -58,7 +55,8 @@ data Select where
     Select :: (SodaExpr m, SodaTypes a) => m a -> Select
     Alias  :: (SodaExpr m, SodaTypes a) => m a -> String -> Select
 
--- Unless I want to make a typeclass for bools and checkboxes just to get rid of putting in a literal null for $where seems like adding more complications than it's worth.
+-- Check at runtime for Nothing/null as a literal value, and to make sure there aren't any aggregates.
+-- |Where shouldn't be passed a literal null or have any SodaAgg within its compound type.
 data Where where
     Where :: (SodaExpr m) => m Checkbox -> Where
 

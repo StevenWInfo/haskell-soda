@@ -11,6 +11,7 @@ import Data.Function ((&))
 import Soda
 import Query
 import Datatypes
+import SodaFunctions
 
 {-
 The types that I've set up have corrected several incorrect tests that I've made. It's rather satisfying and reassuring to have the library that is made to assure the correctness of queries, corrects its author on how the queries should be made.

@@ -15,6 +15,7 @@ import Control.Exception
 import Soda
 import Query
 import Datatypes
+import SodaFunctions
 
 {-
  - Possibly rename this. Possibly NetworkTests or something.

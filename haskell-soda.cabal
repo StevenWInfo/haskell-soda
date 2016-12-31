@@ -18,6 +18,7 @@ library
   exposed-modules:     Soda
                      , Query
                      , Datatypes
+                     , SodaFunctions
   build-depends:       base >= 4.7 && < 5
                      , bytestring
                      , time
