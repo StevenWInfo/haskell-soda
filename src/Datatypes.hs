@@ -8,6 +8,22 @@ module Datatypes
     , Column (Column)
     , SodaVal (SodaVal)
     , SodaFunc (..)
+    , SodaOp ( Not
+             , IsNull
+             , IsNotNull
+             )
+    , ($==)
+    , ($&&)
+    , ($||)
+    , ($<)
+    , ($<=)
+    , ($>)
+    , ($>=)
+    , ($+)
+    , ($-)
+    , ($*)
+    , ($/)
+    , ($++)
     , Checkbox
     , SodaText
     , Number (Number)
@@ -26,6 +42,7 @@ Geographic values displayed plainly (like in a simple filter or where clause com
  -}
 
 {- Notes:
+ - This file is getting pretty large. Might want to split apart soon.
  -}
 
 -- Improve
@@ -82,19 +99,6 @@ data SodaFunc datatype where
     WithinBox :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaExpr q, SodaTypes geo) => m geo -> n Point -> o Point -> p Point -> q Point -> SodaFunc Checkbox -- Geo constraint that includes location
     WithinCircle :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaTypes geo) => m geo -> n Point -> o Point -> p Number -> SodaFunc Checkbox -- Geo constraint that includes location
     WithinPolygon :: (SodaExpr m, SodaExpr n, SodaTypes geo) => m geo -> n MultiPolygon -> SodaFunc Checkbox -- Geo constraint that doesn't include location.
-    {-
-
-    Other things like operators?
-    =
-    <
-    >
-    -}
-
-{- I don't think any automatic scoping with parenthesis is necessary, but I might need it. Might be good to have a manual one just in case, for people who want it, and for other parts that need it.
-scoper :: (SodaExpr m) => m a -> UParam
-scoper SodaFunc a = "(" ++ (toUrlParam (SodaFunc a) ++ ")"
-scoper = toUrlParam
--}
 
 instance SodaExpr SodaFunc where
     toUrlParam (Avg col) = "avg(" ++ (toUrlParam col) ++ ")"
@@ -128,7 +132,102 @@ instance SodaExpr SodaFunc where
     toUrlParam (WithinCircle point centerLat centerLong radius) = "whithin_circle(" ++ (toUrlParam point) ++ (toUrlParam centerLat) ++ (toUrlParam centerLong) ++ (toUrlParam radius) ++ ")"
     toUrlParam (WithinPolygon point multipolygon) = "within_polygon(" ++ (toUrlParam point) ++ ", " ++ (toUrlParam multipolygon) ++ ")"
 
+data Paren datatype where
+    Paren :: (SodaExpr m, SodaTypes a) => m a -> Paren a
+
+instance SodaExpr Paren where
+    toUrlParam (Paren a) = "(" ++ toUrlParam a ++ ")"
+
+-- Equals should actually have the same types on both sides except numeric types.
+-- |The operators provided by SODA. This could be included with the SodaFunc type, but that would be a lot of constructors so it's broken out to make smaller and, hopefully, simpler types.
+data SodaOp datatype where
+    Equals          :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaOp Checkbox -- Don't export
+    NotEquals       :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaOp Checkbox -- Don't export
+    And             :: (SodaExpr m, SodaExpr n) => m Checkbox -> n Checkbox -> SodaOp Checkbox -- Don't export
+    Or              :: (SodaExpr m, SodaExpr n) => m Checkbox -> n Checkbox -> SodaOp Checkbox -- Don't export
+    Not             :: (SodaExpr m) => m Checkbox -> SodaOp Checkbox
+    IsNull          :: (SodaExpr m, SodaTypes a) => m a -> SodaOp Checkbox
+    IsNotNull       :: (SodaExpr m, SodaTypes a) => m a -> SodaOp Checkbox
+    Less            :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b-> SodaOp Checkbox
+    LessOrEquals    :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b-> SodaOp Checkbox
+    Greater         :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b-> SodaOp Checkbox
+    GreaterOrEquals :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b-> SodaOp Checkbox
+    Add             :: (SodaExpr m, SodaExpr n, SodaTypes numA, SodaTypes numB) => m numA -> n numB -> SodaOp Number
+    Subtract        :: (SodaExpr m, SodaExpr n, SodaTypes numA, SodaTypes numB) => m numA -> n numB -> SodaOp Number
+    Multiply        :: (SodaExpr m, SodaExpr n, SodaTypes numA, SodaTypes numB) => m numA -> n numB -> SodaOp Number
+    Divide          :: (SodaExpr m, SodaExpr n, SodaTypes numA, SodaTypes numB) => m numA -> n numB -> SodaOp Number
+    Concatenate     :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaOp SodaText
+
+-- Possibly have two equals signs for this and one for filters?
+infixr 4 $==
+($==) :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaOp Checkbox
+($==) = Equals
+
+infixr 3 $&&
+($&&) :: (SodaExpr m, SodaExpr n) => m Checkbox -> n Checkbox -> SodaOp Checkbox
+($&&) = And
+
+infixr 2 $||
+($||) :: (SodaExpr m, SodaExpr n) => m Checkbox -> n Checkbox -> SodaOp Checkbox
+($||) = Or
+
+infixr 4 $<
+($<) :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaOp Checkbox
+($<) = Less
+
+infixr 4 $<=
+($<=) :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaOp Checkbox
+($<=) = LessOrEquals
+
+infixr 4 $>
+($>) :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaOp Checkbox
+($>) = Greater
+
+infixr 4 $>=
+($>=) :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaOp Checkbox
+($>=) = GreaterOrEquals
+
+infixl 6 $+
+($+) :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaOp Number
+($+) = Add
+
+infixl 6 $-
+($-) :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaOp Number
+($-) = Subtract
+
+infixl 7 $*
+($*) :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaOp Number
+($*) = Multiply
+
+infixl 7 $/
+($/) :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaOp Number
+($/) = Divide
+
+infixr 5 $++
+($++) :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaOp SodaText
+($++) = Concatenate
+
+instance SodaExpr SodaOp where
+    toUrlParam (Equals a b)          = toUrlParam a ++ " = " ++ toUrlParam b
+    toUrlParam (NotEquals a b)       = toUrlParam a ++ " != " ++ toUrlParam b
+    toUrlParam (And a b)       = toUrlParam a ++ " AND " ++ toUrlParam b
+    toUrlParam (Or a b)        = toUrlParam a ++ " OR " ++ toUrlParam b
+    toUrlParam (Not a)               = "NOT " ++ toUrlParam a
+    toUrlParam (IsNull a)            = "IS NULL " ++ toUrlParam a
+    toUrlParam (IsNotNull a)         = "IS NOT NULL " ++ toUrlParam a
+    toUrlParam (Less a b)            = toUrlParam a ++ " < " ++ toUrlParam b
+    toUrlParam (LessOrEquals a b)    = toUrlParam a ++ " <= " ++ toUrlParam b
+    toUrlParam (Greater a b)         = toUrlParam a ++ " > " ++ toUrlParam b
+    toUrlParam (GreaterOrEquals a b) = toUrlParam a ++ " >= " ++ toUrlParam b
+    toUrlParam (Add a b)             = toUrlParam a ++ " + " ++ toUrlParam b
+    toUrlParam (Subtract a b)        = toUrlParam a ++ " - " ++ toUrlParam b
+    toUrlParam (Multiply a b)        = toUrlParam a ++ " * " ++ toUrlParam b
+    toUrlParam (Divide a b)          = toUrlParam a ++ " / " ++ toUrlParam b
+    toUrlParam (Concatenate a b)     = toUrlParam a ++ " || " ++ toUrlParam b
+
+-- Perhaps a true ternary type would be better. I'm not sure.
 -- |Corresponds to ternary valued values with Nothing as null.
+-- data Checkbox = SodaTrue | SodaFalse | SodaNull -- Would make typing out stuff more consistant.
 type Checkbox = Maybe Bool
 instance SodaTypes (Maybe Bool) where
     toUrlPart Nothing = "null"

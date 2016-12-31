@@ -58,7 +58,7 @@ data Select where
     Select :: (SodaExpr m, SodaTypes a) => m a -> Select
     Alias  :: (SodaExpr m, SodaTypes a) => m a -> String -> Select
 
--- Should maybe use the bool SodaType
+-- Unless I want to make a typeclass for bools and checkboxes just to get rid of putting in a literal null for $where seems like adding more complications than it's worth.
 data Where where
     Where :: (SodaExpr m) => m Checkbox -> Where
 
