@@ -1,6 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleInstances #-}
+
+{-|
+    Module      : Query
+    Description : SODA Query Builders
+    Copyright   : (c) Steven W
+    Maintainer  : Steven W <StevenW.Info@gmail.com>
+    Stability   : Unstable
+
+Elements which make SoQL and other parts of identifying what data you want easier.
+-}
+
 module Query
     ( Query (..)
     , emptyQuery
@@ -21,10 +32,6 @@ import Data.Time.Calendar
 import Data.Time.Clock
 import Datatypes
 import SodaFunctions
-
-{-|
-    Elements which make SoQL and other parts of identifying what data you want easier.
- -}
 
 {-
 #Notes:

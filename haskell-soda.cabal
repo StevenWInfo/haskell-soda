@@ -1,7 +1,7 @@
 name:                haskell-soda
 version:             0.1.0.0
-synopsis:            Haskell bindings for the Socrata Open Data API (SODA).
-description:         Please see README.md
+synopsis:            Haskell bindings for the Socrata Open Data API (SODA)
+description:         These are Haskell bindings for the Socrata Open Data API (SODA).
 homepage:            https://github.com/githubuser/haskell-soda#readme
 license:             BSD3
 license-file:        LICENSE

@@ -2,15 +2,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 {-|
---  Module      : Soda
---  Description : Haskell bindings for the Socrata Open Data API (SODA).
---  Copyright   : (c) Steven W
---  License     : ?
---  Maintainer  : Steven W <StevenW.Info@gmail.com>
---  Stability   : Unstable
---  Portability : Portable(?)
---
---  Haskell bindings for the Socrata Open Data API.
+    Module      : Soda
+    Description : Sending and Receiving queries.
+    Copyright   : (c) Steven W
+    Maintainer  : Steven W <StevenW.Info@gmail.com>
+    Stability   : Unstable
+
+The module for sending off queries and getting their results.
 -}
 
 module Soda
@@ -22,7 +20,6 @@ module Soda
     , urlBuilder
     , getStringResponse
     , getStringBody
-    --, getJsonResponse
     ) where
 
 import qualified Data.ByteString.Lazy.Char8 as L8
@@ -36,7 +33,8 @@ import Control.Exception
 
 import Query
 
-{- #Notes
+{-
+#Notes
 
 - Might want to provide a way to replace any non-string piece of the query with a string just to make it more flexible
     - Also might want to be able to return it in several data types as well.
@@ -49,7 +47,7 @@ import Query
 
 - Handle metadata and other data
 - Have some way to run raw queries and turn complete or partial EDSL queries into raw queries.
- -}
+-}
 
 type Endpoint      = String
 type Request       = String

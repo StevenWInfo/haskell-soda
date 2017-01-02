@@ -1,5 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs #-}
+
+{-|
+    Module      : SodaFunctions
+    Description : SODA Query Level Functions
+    Copyright   : (c) Steven W
+    Maintainer  : Steven W <StevenW.Info@gmail.com>
+    Stability   : Unstable
+
+The types for adding in SODA query level functions into a clause or other part of a SoQL query.
+-}
+
 module SodaFunctions
     ( SodaFunc (..)
     , SodaAgg (..)

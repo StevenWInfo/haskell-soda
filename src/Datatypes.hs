@@ -1,6 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleInstances #-}
+
+{-|
+    Module      : Datatypes
+    Description : SODA Datatypes
+    Copyright   : (c) Steven W
+    Maintainer  : Steven W <StevenW.Info@gmail.com>
+    Stability   : Unstable
+
+These are Haskell types which represent SoQL query types as described on the <https://dev.socrata.com/docs/datatypes Datatypes page> in the SODA documentation.
+
+Geographic values displayed plainly (like in a simple filter or where clause comparison) is displayed in Well-known Text (WKT).
+ -}
+
 module Datatypes
     ( SodaTypes
     , SodaExpr (toUrlParam)
@@ -26,14 +39,6 @@ import Data.List
 import Data.Time.Calendar
 import Data.Time.Clock
 import Data.Time.Format
-
-{-|
-SODA datatypes
-
-These are Haskell types which represent SoQL query types as described on the <https://dev.socrata.com/docs/datatypes Datatypes page> in the SODA documentation.
-
-Geographic values displayed plainly (like in a simple filter or where clause comparison) is displayed in Well-known Text (WKT).
- -}
 
 -- Improve
 type UrlParam = String
