@@ -23,10 +23,11 @@ import Datatypes
 import SodaFunctions
 
 {-|
-Elements which make SoQL and other parts of identifying what data you want easier.
+    Elements which make SoQL and other parts of identifying what data you want easier.
  -}
 
-{- #Notes:
+{-
+#Notes:
  - The replaceFoo names make sense, but don't make for a very good interface.
  -
  - The toParam and replace stuff could be part of a typeclass.

@@ -30,6 +30,8 @@ import Data.Time.Format
 {-|
 SODA datatypes
 
+These are Haskell types which represent SoQL query types as described on the <https://dev.socrata.com/docs/datatypes Datatypes page> in the SODA documentation.
+
 Geographic values displayed plainly (like in a simple filter or where clause comparison) is displayed in Well-known Text (WKT).
  -}
 
@@ -37,83 +39,81 @@ Geographic values displayed plainly (like in a simple filter or where clause com
 type UrlParam = String
 
 -- Maybe make an exportable super or sub typeclass so they can use toUrlParam but can't create any instances of type.
+-- |The class of all things that can represent a SODA query level type. These include concrete values, columns, and SODA functions.
 class SodaExpr m where
     toUrlParam :: m a -> UrlParam
 
-class SodaTypes sodatype where
-    toUrlPart :: sodatype -> UrlParam
-
+-- |The type representing a column. The value it holds is just a string of the column's name, but this GADT also carries around information about the type of the column at the query level.
 data Column sodatype where
     Column :: (SodaTypes sodatype) => String -> Column sodatype
 
 instance SodaExpr Column where
     toUrlParam (Column name) = name
 
+-- |This type just allows us to be able to have Haskell values with Haskell types that correspond with SODA types be able to interact with other SODA expressions like columns and SODA functions.
 data SodaVal datatype where
     SodaVal :: SodaTypes a => a -> SodaVal a
 
 instance SodaExpr SodaVal where
     toUrlParam (SodaVal val) = toUrlPart val
 
+-- |A class of all of the Haskell types which correspond with types that SODA uses.
+class SodaTypes sodatype where
+    toUrlPart :: sodatype -> UrlParam
+
 -- Perhaps a true ternary type would be better. I'm not sure.
--- |Corresponds to ternary valued values with Nothing as null.
 -- data Checkbox = SodaTrue | SodaFalse | SodaNull -- Would make typing out stuff more consistant.
+-- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/checkbox.html SODA's Checkbox type>. It is the basic ternary type with Nothing as null.
 type Checkbox = Maybe Bool
 instance SodaTypes (Maybe Bool) where
     toUrlPart Nothing = "null"
     toUrlPart (Just True) = "true"
     toUrlPart (Just False) = "false"
 
+-- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/money.html SODA's Money type>. Currently it is just a newtype with double, which is obviously inaccurate. It should possibly be a fixed precision number to the hundreths place, although it could also be an integer representing cents. We'll also have to research into if this SODA type is used to represent other currencies as well.
 newtype Money = Money { getMoney :: Double } deriving (Show)
 instance SodaTypes Money where
     toUrlPart m = show m
 
+-- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/double.html SODA's Double type>.
 instance SodaTypes Double where
     toUrlPart d = show d
 
+-- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/double.html SODA's Number type>. Obviously being a newtype around double isn't very accurate when we already have a 'Double' type. We'll have to look around for true arbitrary precision Haskell types.
 newtype Number = Number { getNumber :: Double } deriving (Show)
 instance SodaTypes Number where
     toUrlPart n = show $ getNumber n
 
--- |The name inconsistancy is to prevent inconsistancies with the popular Text type.
+-- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/text.html<Paste> SODA's Text type>. The difference in the name of the Haskell type and the SODA type is to prevent collisions and confusion with the more popular Haskell Text type.
 type SodaText = String
 instance SodaTypes SodaText where
     toUrlPart t = "'" ++ t ++ "'"
 
 -- Cuts off instead of rounding because I have no idea of a good way to handle rounding things like 999.9 milliseconds. If anyone has any better idea of how to handle this, let me know. I suppose I could test and see if the API will handle greater precision, even if it doesn't use it.
+-- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/floating_timestamp.html SODA's Floating Timestamp Type>. The names a bit different because floating timestamp seemed a bit long. The precision and rounding of this value need improvement.
 type Timestamp = UTCTime
 instance SodaTypes Timestamp where
     toUrlPart t = (formatTime defaultTimeLocale tsFormat t) ++ ms
         where tsFormat = iso8601DateFormat (Just "%T")
               ms = take 3 $ formatTime defaultTimeLocale "%q" t
 
--- TODO Bad name. Improve.
--- |Utility function
-pointUPart :: Point -> UrlParam
-pointUPart (Point long lat) = (show long) ++ " " ++ (show lat)
-
 -- I'm actually not completely sure of the precision required here.
 -- Perhaps rename to Position and then have point as a type synonym (since I think that is semantically more correct).
--- The toUrlPart for this one is a bit weird. Expr will have to have it's own serialize function for SoQL functions because points differ in those.
--- Does point not even work in a simple filter?
+-- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/point.html SODA's Point Type>. I didn't make it a simple tuple because the order of the longitude and latitude differ a bit in places. Also, this is a bit more descriptive.
 data Point = Point { longitude :: Double
                    , latitude  :: Double
                    } deriving (Show)
 instance SodaTypes Point where
     toUrlPart point = "'POINT (" ++ (pointUPart point) ++ ")'"
 
--- TODO Similarly bad name
--- |Utility function
-pointsUPart :: [Point] -> UrlParam
-pointsUPart points = "(" ++ (intercalate "," $ map pointUPart points) ++ ")"
-    
-
 -- This has an alternate WKT format. Have to test it out.
+-- |The type that Corresponds with <https://dev.socrata.com/docs/datatypes/multipoint.html SODA's Multipoint type>.
 type MultiPoint = [Point]
 instance SodaTypes MultiPoint where
     toUrlPart points = "'MULTIPOINT " ++ (pointsUPart points) ++ "'"
 
 -- Possibly restrict the values used for these.
+-- |Used as part of the Location type.
 data USAddress = USAddress { address :: String
                            , city    :: String
                            , state   :: String
@@ -122,27 +122,42 @@ data USAddress = USAddress { address :: String
 
 -- Use record syntax?
 -- One of the developers said on stack overflow that there is no representation for location types in things like a simple filter.
--- |According to the SODA documentation, location is a legacy datatype so it is discouraged from being used and some SODA functions available for the point datatype are not available for the location datatype.
+-- |Corresponds with <https://dev.socrata.com/docs/datatypes/location.html SODA's Location type>. According to the SODA documentation, location is a legacy datatype so it is discouraged from being used and some SODA functions available for the point datatype are not available for the location datatype.
 data Location = Location (Maybe Point) (Maybe USAddress)
 instance SodaTypes Location where
     toUrlPart _ = ""
                    
 -- The only difference in the data structure of Line and Multipoint is that Line has to have at least two positions/points in them
+-- |Corresponds with <https://dev.socrata.com/docs/datatypes/line.html SODA's Line type>.
 newtype Line = Line { getLinePoints :: [Point] } deriving (Show)
 instance SodaTypes Line where
     toUrlPart (Line points) = "'LINESTRING " ++ (pointsUPart points) ++ "'"
 
-linesUPart :: [[Point]] -> UrlParam
-linesUPart lines = "(" ++ (intercalate "," $ map pointsUPart lines) ++ ")"
-
+-- |Corresponds with <https://dev.socrata.com/docs/datatypes/multiline.html SODA's Multiline type>.
 type MultiLine = [Line]
 instance SodaTypes MultiLine where
     toUrlPart lines = "'MULTILINESTRING " ++ (linesUPart $ map getLinePoints lines) ++ "'"
 
+-- |Corresponds with <https://dev.socrata.com/docs/datatypes/polygon.html SODA's Polygon type>.
 newtype Polygon = Polygon { getPolyPoints :: [[Point]] }
 instance SodaTypes Polygon where
     toUrlPart (Polygon lines) = "'POLYGON " ++ (linesUPart lines)
 
+-- |Corresponds with <https://dev.socrata.com/docs/datatypes/multipolygon.html SODA's Multipolygon type>.
 type MultiPolygon = [Polygon]
 instance SodaTypes MultiPolygon where
     toUrlPart polygons = "'MULTIPOLYGON (" ++ (intercalate "," $ map (linesUPart . getPolyPoints) polygons) ++ ")'"
+
+-- TODO Bad name. Improve.
+-- |Utility function
+pointUPart :: Point -> UrlParam
+pointUPart (Point long lat) = (show long) ++ " " ++ (show lat)
+
+-- TODO Similarly bad name
+-- |Utility function
+pointsUPart :: [Point] -> UrlParam
+pointsUPart points = "(" ++ (intercalate "," $ map pointUPart points) ++ ")"
+
+-- |Utility function
+linesUPart :: [[Point]] -> UrlParam
+linesUPart lines = "(" ++ (intercalate "," $ map pointsUPart lines) ++ ")"

@@ -1,5 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
+
+{-|
+--  Module      : Soda
+--  Description : Haskell bindings for the Socrata Open Data API (SODA).
+--  Copyright   : (c) Steven W
+--  License     : ?
+--  Maintainer  : Steven W <StevenW.Info@gmail.com>
+--  Stability   : Unstable
+--  Portability : Portable(?)
+--
+--  Haskell bindings for the Socrata Open Data API.
+-}
+
 module Soda
     ( ResponseFormat (..)
     , formatToUrl
