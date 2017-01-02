@@ -21,7 +21,7 @@ module Query
     , Sorting (ASC, DESC)
     , Order (Order)
     , GroupElem (Groupify)
-    , (===)
+    , ($=)
     ) where
 
 import Data.Function ((&))

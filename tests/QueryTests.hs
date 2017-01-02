@@ -22,9 +22,9 @@ tests = testGroup "Query Tests"
     [ testCase "Smoke test for query" $
         queryToString emptyQuery @?= ""
     , testCase "Basic filter query test" $
-        (queryToString $ emptyQuery { filters = Just [ colFoo === (SodaVal "Bar") ]}) @?= "Foo='Bar'"
+        (queryToString $ emptyQuery { filters = Just [ colFoo $= (SodaVal "Bar") ]}) @?= "Foo='Bar'"
     , testCase "Filter query test with a Soda Function." $
-        (queryToString $ emptyQuery { filters = Just [ numCol === avgCol ]}) @?= "Num=avg(Baz)"
+        (queryToString $ emptyQuery { filters = Just [ numCol $= avgCol ]}) @?= "Num=avg(Baz)"
     , testCase "Testing select parameter building." $
         (queryToString $ emptyQuery { selects = Just [ Select colFoo, Alias numCol "NumAlias" ]}) @?= "$select=Foo, Num as NumAlias"
     , testCase "Testing group parameter building." $
@@ -41,7 +41,7 @@ tests = testGroup "Query Tests"
         (queryToString $ emptyQuery { bom = Just True}) @?= "$$bom=true"
     , testCase "Testing all query parts." $
         (queryToString 
-            $ emptyQuery { filters = Just [ numCol === (SodaVal (Number 5.0))]
+            $ emptyQuery { filters = Just [ numCol $= (SodaVal (Number 5.0))]
                          , selects = Just [ Select numCol, Alias avgCol "average"]
                          , groups  = Just [ Groupify colFoo ]
                          , orders  = Just [ Order numCol ASC ]
