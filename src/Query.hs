@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE FlexibleInstances #-}
 
 {-|
     Module      : Query
@@ -19,11 +18,10 @@ module Query
     , queryToParam
     , Filter (Filter)
     , Select (Select, Alias)
-    , GroupElem (Groupify)
     , Sorting (ASC, DESC)
     , Order (Order)
+    , GroupElem (Groupify)
     , (===)
-    , selectsToParam
     ) where
 
 import Data.Function ((&))
@@ -35,52 +33,63 @@ import SodaFunctions
 
 {-
 #Notes:
- - The replaceFoo names make sense, but don't make for a very good interface.
- -
- - The toParam and replace stuff could be part of a typeclass.
+ - The toParam stuff could be part of a typeclass.
  -
  - I have the column type, but I suppose we could have aliases which aren't columns, but aren't concrete values.
  -}
 
--- Obviously completely untrue, but I'll use it to keep track of where I want it to be true.
+-- |Obviously completely untrue, but I'll use it to keep track of where I want it to be true.
 type NonNegative = Int
 
-data Sorting = ASC | DESC
-
--- Could possibly be confused with Ord class.
--- Fix this.
--- Either do this with using an existential type, or make itself as an existential type (using an existential type actually seems easier).
-data Order where
-    Order :: (SodaTypes a) => Column a -> Sorting -> Order
-
--- |A SODA simple filter as an existential type (to fit into the query type cleanly).
+-- |The type of a simple filter query part.
 data Filter where
     Filter :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
 
--- Selects are a little trickier than just strings. Have to be able to mix with certain functions and things as well as aliases.
--- Maybe type synonym for a list of existential types that are of the SodaExpr type.
+-- |The type of the $select query part.
 data Select where
     Select :: (SodaExpr m, SodaTypes a) => m a -> Select
     Alias  :: (SodaExpr m, SodaTypes a) => m a -> String -> Select
 
+-- |Used with the Order type to indicate if the order of a column should be ascending or descending.
+data Sorting = ASC | DESC
+
+-- Could possibly be confused with Ord class.
+-- |The type of the $order query part.
+data Order where
+    Order :: (SodaTypes a) => Column a -> Sorting -> Order
+
 -- Check at runtime for Nothing/null as a literal value, and to make sure there aren't any aggregates.
--- |Where shouldn't be passed a literal null or have any SodaAgg within its compound type.
+-- |The type of the $where query part.
+-- Where shouldn't be passed a literal null or have any SodaAgg within a compound type.
 data Where where
     Where :: (SodaExpr m) => m Checkbox -> Where
 
 -- Not sure if this should differ much from where. Probably have to determine if aggregated at run time.
+-- |The type of the $having query part.
 data Having where
     Having :: (SodaExpr m) => m Checkbox -> Having
 
 -- Possibly confusion with the mathematical concept of a group
+-- Also, for some reason, this is completely inconsistant with the other query parts.
+-- |The type of the $group query part.
 data GroupElem where
     Groupify :: SodaTypes sodatype => Column sodatype -> GroupElem
 
--- Possibly be more specific in the types like "Column" or something.
+{-
+limit :: Int -> Maybe Query
+limit int
+    | int < 0 = Nothing
+    | otherwise = Just (Limit int)
+
+offset :: Int -> Maybe Query
+offset int
+    | int < 0 = Nothing
+    | otherwise = Just (Offset int)
+-}
+
 -- Need to account for negative limit, which doesn't make sense, somehow.
--- Don't export constructor
--- Either have maybes for all of these or have an empty indicator for all types.
--- Custom datatypes for some of these
+-- |The type of the Query itself.
+-- The query is represented as a Haskell record type, and you can add to or modify a query made by the bindings by creating, adding to, and/or modifying a value of type Query.
 data Query = Query { filters  :: Maybe [Filter] -- Type with columns and contents
                    , selects  :: Maybe [Select]
                    , wheres   :: Maybe Where -- Is the lowercase where allowed?
@@ -94,6 +103,7 @@ data Query = Query { filters  :: Maybe [Filter] -- Type with columns and content
                    , bom      :: Maybe Bool
                    }
 
+-- |A useful value since we're often building queries from nothing.
 emptyQuery :: Query
 emptyQuery = Query { filters  = Nothing
                      , selects  = Nothing
@@ -110,23 +120,20 @@ emptyQuery = Query { filters  = Nothing
 
 -- This operator might look too generic. Maybe make it look more specific for filters.
 -- Also might be confusing because later might introduce one for equality comparisons in where and having.
-infix 2 ===
-(===) :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
-(===) = Filter
-
--- This might be a monoid? Also, make a show instance for it.
--- Need to figure out how this works.
-data QueryError = WhereError
-
--- |
--- = ToParam functions
+-- |A little utility infix operator which can be used to make creating queries look a little more like a natural SODA query.
+infix 2 $=
+($=) :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
+($=) = Filter
 
 -- I don't know if changing ifExists order would make it more performant
 -- Need to change up the namings of things.
+-- |Used for getting a query as part of a URL represented with a string. Not recommended to actually use, but provided for the URL string builder and just in case somebody wants it.
 queryToString :: Query -> UrlParam
 queryToString query = intercalate "&" $ map stringify (queryToParam query)
     where stringify (param, val) = param ++ "=" ++ val
 
+-- Should possibly be hidden after being imported into Soda.hs.
+-- |Creates the list of pairs of parameters and values that go into the URL.
 queryToParam :: Query -> [(String, String)]
 queryToParam query = filters' ++ selects' ++ orders' ++ groups' ++ limit' ++ offset' ++ search' ++ bom'
     where filters' = ifExists filtersToParam $ filters query
@@ -142,8 +149,8 @@ queryToParam query = filters' ++ selects' ++ orders' ++ groups' ++ limit' ++ off
 
 -- subqueryToParam actually can't be a recursive call to queryToParam because subqueries are represented differently. Within the subquery I think you can make a recursive call though.
 
--- |
--- == ToParam functions of the query parts
+---
+--ToParam functions for the query parts
 
 filtersToParam :: [Filter] -> [(String, String)]
 filtersToParam filters' = map filterToParam filters'
@@ -176,18 +183,3 @@ searchToParam search' = [("$q", search')]
 bomToParam :: Bool -> [(String, String)]
 bomToParam True = [("$$bom", "true")]
 bomToParam False = [("$$bom", "false")]
-
-{-
-limit :: Int -> Maybe Query
-limit int
-    | int < 0 = Nothing
-    | otherwise = Just (Limit int)
-
-offset :: Int -> Maybe Query
-offset int
-    | int < 0 = Nothing
-    | otherwise = Just (Offset int)
--}
-
--- Paging functionality
--- TODO
