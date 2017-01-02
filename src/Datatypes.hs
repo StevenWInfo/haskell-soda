@@ -15,10 +15,12 @@ Geographic values displayed plainly (like in a simple filter or where clause com
  -}
 
 module Datatypes
-    ( SodaTypes
+    ( UrlParam
     , SodaExpr (toUrlParam)
     , Column (Column)
     , SodaVal (SodaVal)
+    , SodaTypes
+    -- * Haskell types corresponding to SODA Types
     , Checkbox
     , Money (..)
     , Number (..)
@@ -32,7 +34,6 @@ module Datatypes
     , MultiLine
     , Polygon (..)
     , MultiPolygon
-    , UrlParam
     ) where
 
 import Data.List
