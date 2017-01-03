@@ -68,6 +68,7 @@ formatToUrl JSON    = "json"
 formatToUrl RDFXML  = "rdf"
 formatToUrl XML     = "xml"
 
+-- |Required for the req library to throw exceptions.
 instance MonadHttp IO where
   handleHttpException = throwIO
 

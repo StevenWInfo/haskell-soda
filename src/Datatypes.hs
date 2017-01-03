@@ -11,7 +11,7 @@
 
 These are Haskell types which represent SoQL query types as described on the <https://dev.socrata.com/docs/datatypes Datatypes page> in the SODA documentation.
 
-Geographic values displayed plainly (like in a simple filter or where clause comparison) is displayed in Well-known Text (WKT).
+Geographic values displayed plainly (like in a simple filter or where clause comparison) is displayed in <https://en.wikipedia.org/wiki/Well-known_text Well-known Text (WKT)>.
  -}
 
 module Datatypes
@@ -42,6 +42,7 @@ import Data.Time.Clock
 import Data.Time.Format
 
 -- Improve
+-- |Indicates what has been interpreted to be put into a URL. The name could possibly use some improvement.
 type UrlParam = String
 
 -- Maybe make an exportable super or sub typeclass so they can use toUrlParam but can't create any instances of type.
@@ -85,12 +86,12 @@ instance SodaTypes Money where
 instance SodaTypes Double where
     toUrlPart d = show d
 
--- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/double.html SODA's Number type>. Obviously being a newtype around double isn't very accurate when we already have a 'Double' type. We'll have to look around for true arbitrary precision Haskell types.
+-- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/double.html SODA's Number type>. Number is actually supposed to have arbitrary precision, and is a bit repetative as a double since we already have double, but I wasn't exactly sure how to implement it. We'll have to look around for true arbitrary precision Haskell types.
 newtype Number = Number { getNumber :: Double } deriving (Show)
 instance SodaTypes Number where
     toUrlPart n = show $ getNumber n
 
--- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/text.html<Paste> SODA's Text type>. The difference in the name of the Haskell type and the SODA type is to prevent collisions and confusion with the more popular Haskell Text type.
+-- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/text.html SODA's Text type>. The difference in the name of the Haskell type and the SODA type is to prevent collisions and confusion with the more popular Haskell Text type.
 type SodaText = String
 instance SodaTypes SodaText where
     toUrlPart t = "'" ++ t ++ "'"

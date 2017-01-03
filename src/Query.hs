@@ -12,16 +12,17 @@ Elements which make SoQL and other parts of identifying what data you want easie
 -}
 
 module Query
-    ( Query (..)
-    , emptyQuery
-    , queryToString
-    , queryToParam
+    ( NonNegative
     , Filter (Filter)
+    , ($=)
     , Select (Select, Alias)
     , Sorting (ASC, DESC)
     , Order (Order)
     , GroupElem (Groupify)
-    , ($=)
+    , Query (..)
+    , emptyQuery
+    , queryToString
+    , queryToParam
     ) where
 
 import Data.Function ((&))
@@ -44,6 +45,11 @@ type NonNegative = Int
 -- |The type of a simple filter query part.
 data Filter where
     Filter :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
+
+-- |A little utility infix operator which can be used to make creating queries look a little more like a natural SODA query.
+infix 2 $=
+($=) :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
+($=) = Filter
 
 -- |The type of the $select query part.
 data Select where
@@ -117,13 +123,6 @@ emptyQuery = Query { filters  = Nothing
                      , subquery = Nothing
                      , bom      = Nothing
                      }
-
--- This operator might look too generic. Maybe make it look more specific for filters.
--- Also might be confusing because later might introduce one for equality comparisons in where and having.
--- |A little utility infix operator which can be used to make creating queries look a little more like a natural SODA query.
-infix 2 $=
-($=) :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
-($=) = Filter
 
 -- I don't know if changing ifExists order would make it more performant
 -- Need to change up the namings of things.
