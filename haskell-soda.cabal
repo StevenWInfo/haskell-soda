@@ -33,6 +33,7 @@ test-suite haskell-soda-test
   main-is:             TestSuite.hs
   other-modules:       QueryTests
                      , SodaTests
+                     , DatatypeTests
   build-depends:       tasty
                      --, Quickcheck
                      --, HUnit

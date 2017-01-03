@@ -6,8 +6,6 @@ module QueryTests
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import Data.Function ((&))
-
 import Soda
 import Query
 import Datatypes

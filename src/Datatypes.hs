@@ -80,7 +80,7 @@ instance SodaTypes (Maybe Bool) where
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/money.html SODA's Money type>. Currently it is just a newtype with double, which is obviously inaccurate. It should possibly be a fixed precision number to the hundreths place, although it could also be an integer representing cents. We'll also have to research into if this SODA type is used to represent other currencies as well.
 newtype Money = Money { getMoney :: Double } deriving (Show)
 instance SodaTypes Money where
-    toUrlPart m = show m
+    toUrlPart m = show . getMoney $ m
 
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/double.html SODA's Double type>.
 instance SodaTypes Double where

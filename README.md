@@ -15,6 +15,8 @@ I'm still pretty new to creating larger projects with Haskell, so any suggestion
 
 I'll wait until there are actual somewhat stable and usable parts before adding anything here.
 
+(Mention that I actually recommend you *don't* use OverloadedStrings in the same file as queries are being built because the compiler gets confused).
+
 ##Examples
 
 Again, nothing really usable to use as an example yet. Will need to fill this in later.
