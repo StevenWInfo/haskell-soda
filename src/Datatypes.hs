@@ -94,18 +94,22 @@ instance SodaTypes Number where
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/text.html SODA's Text type>. The difference in the name of the Haskell type and the SODA type is to prevent collisions and confusion with the more popular Haskell Text type.
 type SodaText = String
 instance SodaTypes SodaText where
-    toUrlPart t = "'" ++ t ++ "'"
+    toUrlPart t = 
+        let aposFinder '\'' accum = '\'' : '\'' : accum
+            aposFinder char accum = char : accum
+        in "'" ++ foldr aposFinder "" t ++ "'"
 
 -- Cuts off instead of rounding because I have no idea of a good way to handle rounding things like 999.9 milliseconds. If anyone has any better idea of how to handle this, let me know. I suppose I could test and see if the API will handle greater precision, even if it doesn't use it.
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/floating_timestamp.html SODA's Floating Timestamp Type>. The names a bit different because floating timestamp seemed a bit long. The precision and rounding of this value need improvement.
 type Timestamp = UTCTime
 instance SodaTypes Timestamp where
-    toUrlPart t = (formatTime defaultTimeLocale tsFormat t) ++ ms
+    toUrlPart t = (formatTime defaultTimeLocale tsFormat t) ++ "." ++ ms
         where tsFormat = iso8601DateFormat (Just "%T")
               ms = take 3 $ formatTime defaultTimeLocale "%q" t
 
 -- I'm actually not completely sure of the precision required here.
 -- Perhaps rename to Position and then have point as a type synonym (since I think that is semantically more correct).
+-- Might also want to shorten fields to long and lat or something.
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/point.html SODA's Point Type>. I didn't make it a simple tuple because the order of the longitude and latitude differ a bit in places. Also, this is a bit more descriptive.
 data Point = Point { longitude :: Double
                    , latitude  :: Double
@@ -124,11 +128,12 @@ instance SodaTypes MultiPoint where
 data USAddress = USAddress { address :: String
                            , city    :: String
                            , state   :: String
-                           , zip     :: String
+                           , zipCode :: String
                            }
 
 -- Use record syntax?
 -- One of the developers said on stack overflow that there is no representation for location types in things like a simple filter.
+-- Should perhaps throw an error if toUrlPart is called for location, because it never should be.
 -- |Corresponds with <https://dev.socrata.com/docs/datatypes/location.html SODA's Location type>. According to the SODA documentation, location is a legacy datatype so it is discouraged from being used and some SODA functions available for the point datatype are not available for the location datatype.
 data Location = Location (Maybe Point) (Maybe USAddress)
 instance SodaTypes Location where
@@ -163,8 +168,8 @@ pointUPart (Point long lat) = (show long) ++ " " ++ (show lat)
 -- TODO Similarly bad name
 -- |Utility function
 pointsUPart :: [Point] -> UrlParam
-pointsUPart points = "(" ++ (intercalate "," $ map pointUPart points) ++ ")"
+pointsUPart points = "(" ++ (intercalate ", " $ map pointUPart points) ++ ")"
 
 -- |Utility function
 linesUPart :: [[Point]] -> UrlParam
-linesUPart lines = "(" ++ (intercalate "," $ map pointsUPart lines) ++ ")"
+linesUPart lines = "(" ++ (intercalate ", " $ map pointsUPart lines) ++ ")"

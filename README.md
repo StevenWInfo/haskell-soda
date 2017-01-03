@@ -17,6 +17,8 @@ I'll wait until there are actual somewhat stable and usable parts before adding 
 
 (Mention that I actually recommend you *don't* use OverloadedStrings in the same file as queries are being built because the compiler gets confused).
 
+(Some type creation can get kind of long so you can make helper functions to make things shorter. For example, one for points, but then you have to be consistant with longitude and latitude). (Also, if there's anything that is more verbose than you would like, you can usually make it shorter with your own helper functions.)
+
 ##Examples
 
 Again, nothing really usable to use as an example yet. Will need to fill this in later.
