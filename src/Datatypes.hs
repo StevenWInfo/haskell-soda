@@ -84,7 +84,7 @@ instance SodaTypes Money where
 
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/double.html SODA's Double type>.
 instance SodaTypes Double where
-    toUrlPart d = show d
+    toUrlPart = show
 
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/double.html SODA's Number type>. Number is actually supposed to have arbitrary precision, and is a bit repetative as a double since we already have double, but I wasn't exactly sure how to implement it. We'll have to look around for true arbitrary precision Haskell types.
 newtype Number = Number { getNumber :: Double } deriving (Show)
@@ -153,12 +153,12 @@ instance SodaTypes MultiLine where
 -- |Corresponds with <https://dev.socrata.com/docs/datatypes/polygon.html SODA's Polygon type>.
 newtype Polygon = Polygon { getPolyPoints :: [[Point]] }
 instance SodaTypes Polygon where
-    toUrlPart (Polygon lines) = "'POLYGON " ++ (linesUPart lines)
+    toUrlPart (Polygon lines) = "'POLYGON " ++ (linesUPart lines) ++ "'"
 
 -- |Corresponds with <https://dev.socrata.com/docs/datatypes/multipolygon.html SODA's Multipolygon type>.
 type MultiPolygon = [Polygon]
 instance SodaTypes MultiPolygon where
-    toUrlPart polygons = "'MULTIPOLYGON (" ++ (intercalate "," $ map (linesUPart . getPolyPoints) polygons) ++ ")'"
+    toUrlPart polygons = "'MULTIPOLYGON (" ++ (intercalate ", " $ map (linesUPart . getPolyPoints) polygons) ++ ")'"
 
 -- TODO Bad name. Improve.
 -- |Utility function

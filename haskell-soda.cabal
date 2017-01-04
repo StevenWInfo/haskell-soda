@@ -34,6 +34,7 @@ test-suite haskell-soda-test
   other-modules:       QueryTests
                      , SodaTests
                      , DatatypeTests
+                     , SodaFunctionTests
   build-depends:       tasty
                      --, Quickcheck
                      --, HUnit
