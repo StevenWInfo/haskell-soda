@@ -17,6 +17,8 @@ Geographic values displayed plainly (like in a simple filter or where clause com
 module Datatypes
     ( UrlParam
     , SodaExpr (toUrlParam)
+    , Expr (Expr)
+    , exprUrlParam
     , Column (Column)
     , SodaVal (SodaVal)
     , SodaTypes
@@ -57,16 +59,24 @@ data Column sodatype where
 instance SodaExpr Column where
     toUrlParam (Column name) = name
 
--- |This type just allows us to be able to have Haskell values with Haskell types that correspond with SODA types be able to interact with other SODA expressions like columns and SODA functions.
-data SodaVal datatype where
-    SodaVal :: SodaTypes a => a -> SodaVal a
-
 instance SodaExpr SodaVal where
     toUrlParam (SodaVal val) = toUrlPart val
+
+-- This makes it even more verbose, but I'm trying to just make it work initially.
+-- |Some types require their input to have the type constructor be anonymized. This existential type does just that.
+data Expr expr where
+    Expr :: (SodaExpr m, SodaTypes a) => m a -> Expr a
+
+exprUrlParam :: (SodaTypes a) => Expr a -> UrlParam
+exprUrlParam (Expr (expr)) = toUrlParam expr
 
 -- |A class of all of the Haskell types which correspond with types that SODA uses.
 class SodaTypes sodatype where
     toUrlPart :: sodatype -> UrlParam
+
+-- |This type just allows us to be able to have Haskell values with Haskell types that correspond with SODA types be able to interact with other SODA expressions like columns and SODA functions.
+data SodaVal datatype where
+    SodaVal :: SodaTypes a => a -> SodaVal a
 
 -- Perhaps a true ternary type would be better. I'm not sure.
 -- data Checkbox = SodaTrue | SodaFalse | SodaNull -- Would make typing out stuff more consistant.
@@ -79,6 +89,7 @@ instance SodaTypes (Maybe Bool) where
 
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/money.html SODA's Money type>. Currently it is just a newtype with double, which is obviously inaccurate. It should possibly be a fixed precision number to the hundreths place, although it could also be an integer representing cents. We'll also have to research into if this SODA type is used to represent other currencies as well.
 newtype Money = Money { getMoney :: Double } deriving (Show)
+-- I could at least maybe limit the precision when putting in URL even if I can't in the type itself yet.
 instance SodaTypes Money where
     toUrlPart m = show . getMoney $ m
 
