@@ -10,7 +10,7 @@ import Test.Tasty.HUnit
 
 import GHC.Generics
 import Data.Aeson ((.:))
-import qualified Data.Aeson as Json
+import Data.Aeson
 import Data.Function ((&))
 import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Types.Status as Status
@@ -51,6 +51,25 @@ tests = testGroup "Soda Tests"
         let query1 = queryToParam $ emptyQuery { limit = Just 1 }
         response <- getStringBody testDomain testDataset testFormat query1
         response @?= result
+    -- I'm testing this in SodaTests.hs but it's defined in Query.hs?
+    , testCase "Testing FromJSON decoding for SodaTypes" $
+        case (decode response :: Maybe TestSelectA) of
+            Just decoded -> do
+                getVal (source decoded) @?= getVal (source responseVal)
+                getVal (shake_power decoded) @?= getVal (shake_power responseVal)
+                getVal (some_val decoded) @?= getVal (some_val responseVal)
+                getVal (some_expr decoded) @?= getVal (some_expr responseVal)
+            _ -> do
+                False @? "Decoding returned Nothing"
+    , testCase "Testing if the JSON is well formed" $
+        case (decode responseTest :: Maybe TestJson) of
+            Just decoded -> do
+                sourceA decoded @?= "ak"
+                shake_powerA decoded @?= 1.6
+                some_valA decoded @?= "36km W of Valdez, Alaska"
+                some_exprA decoded @?= "ak11243041"
+            _ -> do
+                False @? "JSON malformed"
     ]
     where
         testDomain  = "soda.demo.socrata.com"
@@ -59,6 +78,12 @@ tests = testGroup "Soda Tests"
         testQuery   = [("$where", "earthquake_id in('ak11243041', 'ak11246151', 'ak11246918')")]
         result      = "[{\"depth\":\"0\",\"earthquake_id\":\"ak11243041\",\"magnitude\":\"1.6\",\"number_of_stations\":\"6\",\"region\":\"36km W of Valdez, Alaska\",\"source\":\"ak\"}]\n"
         response    = "[{\"some_expr\":\"ak11243041\",\"shake_power\":\"1.6\",\"some_val\":\"36km W of Valdez, Alaska\",\"source\":\"ak\"}]\n"
+        responseTest = "[{\"some_exprA\":\"ak11243041\",\"shake_powerA\":\"1.6\",\"some_valA\":\"36km W of Valdez, Alaska\",\"sourceA\":\"ak\"}]\n"
+        responseVal = TestSelectA { source = Expr . SodaVal $ "ak"
+                                  , shake_power = Expr . SodaVal $ SodaNum 1.6
+                                  , some_val = Expr . SodaVal $ "36km W of Valdez, Alaska"
+                                  , some_expr = Expr . SodaVal $ "ak11243041"
+                                  }
         selectNotFound :: HttpException -> Maybe Status.Status
         selectNotFound (VanillaHttpException (Http.HttpExceptionRequest _ (Http.StatusCodeException (rec) _))) = Just (Http.responseStatus rec)
         selectNotFound _ = Nothing
@@ -69,8 +94,8 @@ data TestSelectA = TestSelectA { source      :: Expr SodaText
                                , some_expr   :: Expr SodaText
                                } deriving (Generic, Show)
 
-instance Json.FromJSON TestSelectA where
-    parseJSON (Json.Object v) = TestSelectA <$>
+instance FromJSON TestSelectA where
+    parseJSON (Object v) = TestSelectA <$>
                                 v .: "source" <*>
                                 v .: "shake_power" <*>
                                 v .: "some_val" <*>
@@ -82,38 +107,11 @@ selectA = TestSelectA { source      = Expr (Column "source")
                       , some_val    = Expr $ SodaVal "Foobar"
                       , some_expr   = Expr $ SodaVal "Lorem" $++ SodaVal " ipsum"
                       }
-{-
-data Earthquake =
-    Earthquake { source :: String
-               , earthquake_id :: String
-               , version :: String
-               , magnitude :: Double
-               , depth :: Double
-               , number_of_stations :: Double
-               , region :: String
-               , location_city :: String
-               , location :: String
-               , location_address :: String
-               , location_zip :: String
-               , location_state :: String
-               } deriving (Show, Generic)
 
---instance FromJSON Earthquake
-instance FromJSON Earthquake where
-    parseJSON (Object v) =
-        Earthquake <$> v .:? "source" .!= ""
-                   <*> v .:? "earthquake_id" .!= ""
-                   <*> v .:? "version" .!= ""
-                   <*> v .:? "magnitude" .!= ""
-                   <*> v .:? "depth" .!= ""
-                   <*> v .:? "number_of_stations" .!= ""
-                   <*> v .:? "region" .!= ""
-                   <*> v .:? "location_city" .!= ""
-                   <*> v .:? "location" .!= ""
-                   <*> v .:? "location_address" .!= ""
-                   <*> v .:? "location_zip" .!= ""
-                   <*> v .:? "location_state" .!= ""
-    parseJSON _ = mzero
+data TestJson = TestJson { sourceA :: String
+                         , shake_powerA :: Double
+                         , some_valA :: String
+                         , some_exprA :: String
+                         } deriving (Generic, Show)
 
-instance ToJSON Earthquake
--}
+instance FromJSON TestJson

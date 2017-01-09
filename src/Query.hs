@@ -26,8 +26,8 @@ module Query
     ) where
 
 import Data.Aeson ((.:))
-import qualified Data.Aeson as Json
-import qualified Data.Aeson.Types as JTypes
+import Data.Aeson
+import Data.Aeson.Types
 import qualified Data.Vector as V
 import qualified Data.HashMap.Strict as HM
 import Data.List
@@ -35,6 +35,8 @@ import Data.Time.Calendar
 import Data.Time.Clock
 import Datatypes
 import SodaFunctions
+
+import Debug.Trace
 
 {-
 #Notes:
@@ -193,37 +195,44 @@ bomToParam False = [("$$bom", "false")]
 --
 -- Might have to import Data.Aeson.Instances
 
-instance (SodaTypes a, JTypes.FromJSON a) => Json.FromJSON (Expr a) where
+instance (SodaTypes a, FromJSON a) => FromJSON (Expr a) where
     parseJSON x = do
-        val <- (JTypes.parseJSON x) :: JTypes.Parser a
+        val <- (parseJSON x) :: Parser a
         return (Expr (SodaVal val))
 
-instance Json.FromJSON Money where
+instance FromJSON Money where
     parseJSON a = do
-        b <- (JTypes.parseJSON a) :: JTypes.Parser Double
+        b <- (parseJSON a) :: Parser Double
         return (Money b)
 
-instance Json.FromJSON SodaNum where
+instance FromJSON SodaNum where
     parseJSON a = do
-        b <- (JTypes.parseJSON a) :: JTypes.Parser Double
-        return (SodaNum b)
+        b <- (parseJSON a) :: Parser Double
+        trace (show b) $ return (SodaNum b)
 
-parsePoint :: Json.Value -> JTypes.Parser Point
-parsePoint (JTypes.Array arr) = do
-    long <- (JTypes.parseJSON $ (arr V.! 0)) :: JTypes.Parser Double
-    lat <- (JTypes.parseJSON $ (arr V.! 1)) :: JTypes.Parser Double
+parsePoint :: Value -> Parser Point
+parsePoint (Array arr) = do
+    long <- (parseJSON $ (arr V.! 0)) :: Parser Double
+    lat <- (parseJSON $ (arr V.! 1)) :: Parser Double
     return (Point { longitude = long, latitude = lat })
 parsePoint _ = fail ("coordinates was not an array as expected")
     
 
 -- Use the type parameter to add some extra checking maybe
-instance Json.FromJSON Point where
-    parseJSON = Json.withObject "Point" $ \o ->
+instance FromJSON Point where
+    parseJSON = withObject "Point" $ \o ->
         case HM.lookup "coordinates" o of
             Nothing -> fail ("key coordinates not present")
             Just val -> parsePoint val
 
 -- What the JSON representation of Location is needs to be determined before writing FromJSON.
 
---instance Json.FromJSON MultiPoint where
-    --parseJSON 
+instance FromJSON Line where
+    parseJSON json = do
+        val <- (parseJSON json) :: Parser [Point]
+        return (Line val)
+
+instance FromJSON Polygon where
+    parseJSON json = do
+        val <- (parseJSON json) :: Parser [[Point]]
+        return (Polygon val)
