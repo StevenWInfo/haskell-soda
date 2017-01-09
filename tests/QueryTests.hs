@@ -39,7 +39,7 @@ tests = testGroup "Query Tests"
         (queryToString $ emptyQuery { bom = Just True}) @?= "$$bom=true"
     , testCase "Testing all query parts." $
         (queryToString 
-            $ emptyQuery { filters = Just [ numCol $= (SodaVal (Number 5.0))]
+            $ emptyQuery { filters = Just [ numCol $= (SodaVal (SodaNum 5.0))]
                          --, selects = Just [ Select numCol, Alias avgCol "average"]
                          , groups  = Just [ Groupify colFoo ]
                          , orders  = Just [ Order numCol ASC ]
@@ -57,8 +57,8 @@ tests = testGroup "Query Tests"
         getVal (source  selectA) @?= Left BadLower
     ]
     where colFoo = Column "Foo" :: Column SodaText
-          numCol = Column "Num" :: Column Number
-          avgCol = Avg ((Column "Baz") :: Column Number)
+          numCol = Column "Num" :: Column SodaNum
+          avgCol = Avg ((Column "Baz") :: Column SodaNum)
 
 -- Not sure if either option will even work yet.
 
@@ -68,13 +68,13 @@ tests = testGroup "Query Tests"
 --       The types are baked into the record type
 -- Cons: User will have to lift any instance with Expr. Could advise to make a helper function if they do it a lot, but that's not great.
 data TestSelectA = TestSelectA { source      :: Expr SodaText
-                               , shake_power :: Expr Number
+                               , shake_power :: Expr SodaNum
                                , some_val    :: Expr SodaText
                                , some_expr   :: Expr SodaText
                                }
 
 selectA = TestSelectA { source = Expr (Column "source")
-                      , shake_power = Expr $ ((Column "magnitude") :: Column Number) $+ SodaVal (Number 4.5)
+                      , shake_power = Expr $ ((Column "magnitude") :: Column SodaNum) $+ SodaVal (SodaNum 4.5)
                       , some_val = Expr $ SodaVal "Foobar"
                       , some_expr = Expr $ SodaVal "Lorem" $++ SodaVal " ipsum"
                       }
@@ -90,7 +90,7 @@ data TestSelectB a b c = TestSelectB { region   :: a
                                      }
 
 selectB = TestSelectB { region = Column "region" :: Column SodaText
-                      , deepness = ((Column "depth") :: Column Number) $+ SodaVal (Number 30)
+                      , deepness = ((Column "depth") :: Column SodaNum) $+ SodaVal (SodaNum 30)
                       , whatever = SodaVal "abc" $++ SodaVal "xyz"
                       }
 

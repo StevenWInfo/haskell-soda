@@ -64,7 +64,7 @@ tests = testGroup "Soda Tests"
         selectNotFound _ = Nothing
 
 data TestSelectA = TestSelectA { source      :: Expr SodaText
-                               , shake_power :: Expr Number
+                               , shake_power :: Expr SodaNum
                                , some_val    :: Expr SodaText
                                , some_expr   :: Expr SodaText
                                } deriving (Generic, Show)
@@ -78,7 +78,7 @@ instance Json.FromJSON TestSelectA where
     parseJSON _          = mempty
 
 selectA = TestSelectA { source      = Expr (Column "source")
-                      , shake_power = Expr $ ((Column "magnitude") :: Column Number) $+ SodaVal (Number 4.5)
+                      , shake_power = Expr $ ((Column "magnitude") :: Column SodaNum) $+ SodaVal (SodaNum 4.5)
                       , some_val    = Expr $ SodaVal "Foobar"
                       , some_expr   = Expr $ SodaVal "Lorem" $++ SodaVal " ipsum"
                       }

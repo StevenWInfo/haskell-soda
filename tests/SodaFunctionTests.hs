@@ -36,7 +36,7 @@ tests = testGroup "Soda Function Tests"
           sv     = SodaVal
           sd :: Double -> SodaVal Double -- Note to self: GADTs are *very* finicky
           sd a   = sv a
-          sn n   = sv $ Number n -- Maybe should just make a different version of SodaVal for all numbers.
+          sn n   = sv $ SodaNum n -- Maybe should just make a different version of SodaVal for all numbers.
           pt a b = sv $ Point { longitude                                                                  = a, latitude = b }
           loc    = Column "some_place" :: Column Point
           dblCol = Column "some_double" :: Column Double

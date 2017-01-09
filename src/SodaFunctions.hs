@@ -50,7 +50,7 @@ data SodaFunc datatype where
     DateTruncY               :: (SodaExpr m) => m Timestamp -> SodaFunc Timestamp
     DateTruncYM              :: (SodaExpr m) => m Timestamp -> SodaFunc Timestamp
     DateTruncYMD             :: (SodaExpr m) => m Timestamp -> SodaFunc Timestamp
-    Distance                 :: (SodaExpr m, SodaExpr n) => m Point -> n Point -> SodaFunc Number
+    Distance                 :: (SodaExpr m, SodaExpr n) => m Point -> n Point -> SodaFunc SodaNum
     -- Takes an agg (can't use in where)
     Extent                   :: (SodaExpr m, SodaTypes geo) => m geo -> SodaFunc MultiPolygon
     -- Input needs to be constrained. This is going to need to be fixed because the list has to all be the same type which is problematic. Maybe if I made all of the different expressions as one type instead? Or maybe I say that you can't put in columns and make a SodaFunc for values?
@@ -66,22 +66,22 @@ data SodaFunc datatype where
     NotIn                    :: (SodaExpr m, SodaTypes a, SodaTypes b) => m a -> [Expr b] -> SodaFunc Checkbox
     NotLike                  :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaFunc Checkbox
     -- Geo constraint
-    NumPoints                :: (SodaExpr m, SodaTypes geo) => m geo -> SodaFunc Number
+    NumPoints                :: (SodaExpr m, SodaTypes geo) => m geo -> SodaFunc SodaNum
     -- Alternative geo constraint. Need to test this.
-    Simplify                 :: (SodaExpr m, SodaExpr n, SodaTypes geoAlt) => m geoAlt -> n Number -> SodaFunc geoAlt
+    Simplify                 :: (SodaExpr m, SodaExpr n, SodaTypes geoAlt) => m geoAlt -> n SodaNum -> SodaFunc geoAlt
     -- Alternative geo constraint. Need to test this. Better name?
-    SimplifyPreserveTopology :: (SodaExpr m, SodaExpr n, SodaTypes geoAlt) => m geoAlt -> n Number -> SodaFunc geoAlt
+    SimplifyPreserveTopology :: (SodaExpr m, SodaExpr n, SodaTypes geoAlt) => m geoAlt -> n SodaNum -> SodaFunc geoAlt
     StartsWith               :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaFunc Checkbox
     -- Num constraint. First parameter might be Agg instead of Column
     -- Is this really an aggregate or can you actually put any expression in the input?
-    StdDevPop                :: (SodaTypes num) => Column num -> SodaFunc Number
+    StdDevPop                :: (SodaTypes num) => Column num -> SodaFunc SodaNum
     -- Num constraint. First parameter might be Agg instead of Column
-    StdDevSamp               :: (SodaTypes num) => Column num -> SodaFunc Number
+    StdDevSamp               :: (SodaTypes num) => Column num -> SodaFunc SodaNum
     Upper                    :: (SodaExpr m) => m SodaText -> SodaFunc SodaText
     -- Geo constraint that includes location
-    WithinBox                :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaExpr q, SodaTypes geo) => m geo -> n Number -> o Number -> p Number -> q Number -> SodaFunc Checkbox
+    WithinBox                :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaExpr q, SodaTypes geo) => m geo -> n SodaNum -> o SodaNum -> p SodaNum -> q SodaNum -> SodaFunc Checkbox
     -- Geo constraint that includes location
-    WithinCircle             :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaTypes geo) => m geo -> n Number -> o Number -> p Number -> SodaFunc Checkbox
+    WithinCircle             :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaTypes geo) => m geo -> n SodaNum -> o SodaNum -> p SodaNum -> SodaFunc Checkbox
     -- Geo constraint that doesn't include location.
     WithinPolygon            :: (SodaExpr m, SodaExpr n, SodaTypes geo) => m geo -> n MultiPolygon -> SodaFunc Checkbox
 
@@ -119,11 +119,11 @@ instance SodaExpr SodaFunc where
 
 -- |The SODA, query level functions which are aggregates. Seperating them out doesn't actually have any function, but it's good to know which ones are aggregates. It would be nice if there was some way to have $where clauses be able to assert at the type level that they don't have any aggregates, but I can't think of any way to do it.
 data SodaAgg datatype where
-    Avg   :: SodaTypes a => Column a -> SodaAgg Number
-    Count :: SodaTypes a => Column a -> SodaAgg Number
+    Avg   :: SodaTypes a => Column a -> SodaAgg SodaNum
+    Count :: SodaTypes a => Column a -> SodaAgg SodaNum
     Max   :: (SodaTypes a) => Column a -> SodaAgg a
     Min   :: (SodaTypes a) => Column a -> SodaAgg a
-    Sum   :: Column Number -> SodaAgg Number
+    Sum   :: Column SodaNum -> SodaAgg SodaNum
 
 instance SodaExpr SodaAgg where
     toUrlParam (Avg col)     = "avg(" ++ (toUrlParam col) ++ ")"

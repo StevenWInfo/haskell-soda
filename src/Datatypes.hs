@@ -27,7 +27,7 @@ module Datatypes
     -- * Haskell types corresponding to SODA Types
     , Checkbox
     , Money (..)
-    , Number (..)
+    , SodaNum (..)
     , SodaText
     , Timestamp
     , Point (..)
@@ -109,9 +109,9 @@ instance SodaTypes Double where
     toUrlPart = show
 
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/double.html SODA's Number type>. Number is actually supposed to have arbitrary precision, and is a bit repetative as a double since we already have double, but I wasn't exactly sure how to implement it. We'll have to look around for true arbitrary precision Haskell types.
-newtype Number = Number { getNumber :: Double } deriving (Show)
-instance SodaTypes Number where
-    toUrlPart n = show $ getNumber n
+newtype SodaNum = SodaNum { getSodaNum :: Double } deriving (Show)
+instance SodaTypes SodaNum where
+    toUrlPart n = show $ getSodaNum n
 
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/text.html SODA's Text type>. The difference in the name of the Haskell type and the SODA type is to prevent collisions and confusion with the more popular Haskell Text type.
 type SodaText = String

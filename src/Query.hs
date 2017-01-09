@@ -203,10 +203,10 @@ instance Json.FromJSON Money where
         b <- (JTypes.parseJSON a) :: JTypes.Parser Double
         return (Money b)
 
-instance Json.FromJSON Number where
+instance Json.FromJSON SodaNum where
     parseJSON a = do
         b <- (JTypes.parseJSON a) :: JTypes.Parser Double
-        return (Number b)
+        return (SodaNum b)
 
 parsePoint :: Json.Value -> JTypes.Parser Point
 parsePoint (JTypes.Array arr) = do
