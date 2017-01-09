@@ -115,6 +115,7 @@ instance SodaExpr SodaFunc where
     toUrlParam (WithinBox shape nwLat nwLong seLat seLong)      = "within_box(" ++ (toUrlParam shape) ++ ", " ++ (toUrlParam nwLat) ++ ", " ++ (toUrlParam nwLong) ++ ", " ++ (toUrlParam seLat) ++ ", " ++ (toUrlParam seLong) ++ ")"
     toUrlParam (WithinCircle point centerLat centerLong radius) = "within_circle(" ++ (toUrlParam point) ++ ", " ++ (toUrlParam centerLat) ++ ", " ++ (toUrlParam centerLong) ++ ", " ++ (toUrlParam radius) ++ ")"
     toUrlParam (WithinPolygon point multipolygon)               = "within_polygon(" ++ (toUrlParam point) ++ ", " ++ (toUrlParam multipolygon) ++ ")"
+    lower sodafunc = Left BadLower
 
 -- |The SODA, query level functions which are aggregates. Seperating them out doesn't actually have any function, but it's good to know which ones are aggregates. It would be nice if there was some way to have $where clauses be able to assert at the type level that they don't have any aggregates, but I can't think of any way to do it.
 data SodaAgg datatype where
@@ -130,6 +131,7 @@ instance SodaExpr SodaAgg where
     toUrlParam (Max numbers) = "max(" ++ (toUrlParam numbers) ++ ")"
     toUrlParam (Min numbers) = "min(" ++ (toUrlParam numbers) ++ ")"
     toUrlParam (Sum nums)    = "sum(" ++ (toUrlParam nums) ++ ")"
+    lower sodaagg = Left BadLower
 
 -- |Sometimes you need to add parenthesis in a SODA query to assure the correct order of operations. This type allows that.
 data Paren datatype where
@@ -137,6 +139,7 @@ data Paren datatype where
 
 instance SodaExpr Paren where
     toUrlParam (Paren a) = "(" ++ toUrlParam a ++ ")"
+    lower a = Left BadLower
 
 ---
 
@@ -147,6 +150,7 @@ instance SodaExpr Paren where
 -- The SODA operators (I forgot what I was going to put here).
 
 -- Equals should actually have the same types on both sides except numeric types.
+-- Need to figure out what to do about type ambiguities when there are different types.
 -- |The operators provided by SODA. The constructors are hidden and the corresponding infix operators are used instead in order to look more like natural SoQL. This could be included with the SodaFunc type, but that would be a lot of constructors so it's broken out to make smaller and, hopefully, simpler types.
 data SodaOp datatype where
     Equals          :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaOp Checkbox -- Don't export
@@ -157,8 +161,9 @@ data SodaOp datatype where
     LessOrEquals    :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b-> SodaOp Checkbox
     Greater         :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b-> SodaOp Checkbox
     GreaterOrEquals :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b-> SodaOp Checkbox
-    Add             :: (SodaExpr m, SodaExpr n, SodaTypes numA, SodaTypes numB, SodaTypes numC) => m numA -> n numB -> SodaOp numC
-    Subtract        :: (SodaExpr m, SodaExpr n, SodaTypes numA, SodaTypes numB, SodaTypes numC) => m numA -> n numB -> SodaOp numC
+    Add             :: (SodaExpr m, SodaExpr n, SodaTypes numA, SodaTypes numB) => m numA -> n numB -> SodaOp numB
+    -- Might have to add another similar operator with different characters for final type going the other way.
+    Subtract        :: (SodaExpr m, SodaExpr n, SodaTypes numA, SodaTypes numB) => m numA -> n numB -> SodaOp numB
     Multiply        :: (SodaExpr m, SodaExpr n, SodaTypes numA, SodaTypes numB, SodaTypes numC) => m numA -> n numB -> SodaOp numC
     Divide          :: (SodaExpr m, SodaExpr n, SodaTypes numA, SodaTypes numB, SodaTypes numC) => m numA -> n numB -> SodaOp numC
     Concatenate     :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaOp SodaText
@@ -177,6 +182,7 @@ instance SodaExpr SodaOp where
     toUrlParam (Multiply a b)        = toUrlParam a ++ " * " ++ toUrlParam b
     toUrlParam (Divide a b)          = toUrlParam a ++ " / " ++ toUrlParam b
     toUrlParam (Concatenate a b)     = toUrlParam a ++ " || " ++ toUrlParam b
+    lower a = Left BadLower
 
 -- Possibly have two equals signs for this and one for filters?
 -- |The equals comparison operator as mentioned in the <https://dev.socrata.com/docs/datatypes/number.html SODA documentation>. The infix operator $= was already in use for simple filters so I used the double equals notation that many other languages use for the equality comparison.
@@ -221,12 +227,12 @@ infixr 4 $>=
 
 -- |The addition operator as mentioned in the <https://dev.socrata.com/docs/datatypes/number.html SODA documentation>.
 infixl 6 $+
-($+) :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b, SodaTypes c) => m a -> n b -> SodaOp c
+($+) :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaOp b
 ($+) = Add
 
 -- |The subtraction operator as mentioned in the <https://dev.socrata.com/docs/datatypes/number.html SODA documentation>.
 infixl 6 $-
-($-) :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b, SodaTypes c) => m a -> n b -> SodaOp c
+($-) :: (SodaExpr m, SodaExpr n, SodaTypes a, SodaTypes b) => m a -> n b -> SodaOp b
 ($-) = Subtract
 
 -- |The multiplication operator as mentioned in the <https://dev.socrata.com/docs/datatypes/number.html SODA documentation>.

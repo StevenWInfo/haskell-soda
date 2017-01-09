@@ -16,6 +16,8 @@ tests :: TestTree
 tests = testGroup "Datatype Tests"
     [ testCase "Basic column test" $
         toUrlParam colFoo @?= "Foobar"
+    , testCase "Testing lower" $
+        lower (SodaVal (Just True)) @?= Right (Just True)
     , testCase "Testing what money looks like" $
         (toUrlParam . SodaVal . Money $ 19.99) @?= "19.99"
     , testCase "Testing basic SodaText toUrlParam" $

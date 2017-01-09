@@ -16,8 +16,10 @@ Geographic values displayed plainly (like in a simple filter or where clause com
 
 module Datatypes
     ( UrlParam
-    , SodaExpr (toUrlParam)
+    , SodaError (BadLower)
+    , SodaExpr (toUrlParam, lower)
     , Expr (Expr)
+    , getVal
     , exprUrlParam
     , Column (Column)
     , SodaVal (SodaVal)
@@ -47,10 +49,27 @@ import Data.Time.Format
 -- |Indicates what has been interpreted to be put into a URL. The name could possibly use some improvement.
 type UrlParam = String
 
+data SodaError = BadLower deriving (Eq, Show)
+
 -- Maybe make an exportable super or sub typeclass so they can use toUrlParam but can't create any instances of type.
 -- |The class of all things that can represent a SODA query level type. These include concrete values, columns, and SODA functions.
 class SodaExpr m where
     toUrlParam :: m a -> UrlParam
+    lower :: (SodaTypes a) => m a -> Either SodaError a
+
+-- This makes it even more verbose, but I'm trying to just make it work initially.
+-- |Some types require their input to have the type constructor be anonymized. This existential type does just that.
+data Expr expr where
+    Expr :: (SodaExpr m, SodaTypes a) => m a -> Expr a
+
+instance SodaTypes a => Show (Expr a) where
+    show (Expr a) = toUrlParam a
+
+getVal :: (SodaTypes a) => Expr a -> Either SodaError a
+getVal (Expr a) = lower a
+
+exprUrlParam :: (SodaTypes a) => Expr a -> UrlParam
+exprUrlParam (Expr (expr)) = toUrlParam expr
 
 -- |The type representing a column. The value it holds is just a string of the column's name, but this GADT also carries around information about the type of the column at the query level.
 data Column sodatype where
@@ -58,17 +77,7 @@ data Column sodatype where
 
 instance SodaExpr Column where
     toUrlParam (Column name) = name
-
-instance SodaExpr SodaVal where
-    toUrlParam (SodaVal val) = toUrlPart val
-
--- This makes it even more verbose, but I'm trying to just make it work initially.
--- |Some types require their input to have the type constructor be anonymized. This existential type does just that.
-data Expr expr where
-    Expr :: (SodaExpr m, SodaTypes a) => m a -> Expr a
-
-exprUrlParam :: (SodaTypes a) => Expr a -> UrlParam
-exprUrlParam (Expr (expr)) = toUrlParam expr
+    lower col = Left BadLower
 
 -- |A class of all of the Haskell types which correspond with types that SODA uses.
 class SodaTypes sodatype where
@@ -78,8 +87,10 @@ class SodaTypes sodatype where
 data SodaVal datatype where
     SodaVal :: SodaTypes a => a -> SodaVal a
 
--- Perhaps a true ternary type would be better. I'm not sure.
--- data Checkbox = SodaTrue | SodaFalse | SodaNull -- Would make typing out stuff more consistant.
+instance SodaExpr SodaVal where
+    toUrlParam (SodaVal val) = toUrlPart val
+    lower (SodaVal a) = Right a
+
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/checkbox.html SODA's Checkbox type>. It is the basic ternary type with Nothing as null.
 type Checkbox = Maybe Bool
 instance SodaTypes (Maybe Bool) where

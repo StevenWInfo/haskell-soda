@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module SodaTests
     ( tests
     ) where
@@ -6,6 +8,9 @@ module SodaTests
 import Test.Tasty
 import Test.Tasty.HUnit
 
+import GHC.Generics
+import Data.Aeson ((.:))
+import qualified Data.Aeson as Json
 import Data.Function ((&))
 import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Types.Status as Status
@@ -48,15 +53,35 @@ tests = testGroup "Soda Tests"
         response @?= result
     ]
     where
-        testDomain = "soda.demo.socrata.com"
+        testDomain  = "soda.demo.socrata.com"
         testDataset = "6yvf-kk3n"
-        testFormat = JSON
-        testQuery = [("$where", "earthquake_id in('ak11243041', 'ak11246151', 'ak11246918')")]
-        result = "[{\"depth\":\"0\",\"earthquake_id\":\"ak11243041\",\"magnitude\":\"1.6\",\"number_of_stations\":\"6\",\"region\":\"36km W of Valdez, Alaska\",\"source\":\"ak\"}]\n"
+        testFormat  = JSON
+        testQuery   = [("$where", "earthquake_id in('ak11243041', 'ak11246151', 'ak11246918')")]
+        result      = "[{\"depth\":\"0\",\"earthquake_id\":\"ak11243041\",\"magnitude\":\"1.6\",\"number_of_stations\":\"6\",\"region\":\"36km W of Valdez, Alaska\",\"source\":\"ak\"}]\n"
+        response    = "[{\"some_expr\":\"ak11243041\",\"shake_power\":\"1.6\",\"some_val\":\"36km W of Valdez, Alaska\",\"source\":\"ak\"}]\n"
         selectNotFound :: HttpException -> Maybe Status.Status
         selectNotFound (VanillaHttpException (Http.HttpExceptionRequest _ (Http.StatusCodeException (rec) _))) = Just (Http.responseStatus rec)
         selectNotFound _ = Nothing
 
+data TestSelectA = TestSelectA { source      :: Expr SodaText
+                               , shake_power :: Expr Number
+                               , some_val    :: Expr SodaText
+                               , some_expr   :: Expr SodaText
+                               } deriving (Generic, Show)
+
+instance Json.FromJSON TestSelectA where
+    parseJSON (Json.Object v) = TestSelectA <$>
+                                v .: "source" <*>
+                                v .: "shake_power" <*>
+                                v .: "some_val" <*>
+                                v .: "some_expr"
+    parseJSON _          = mempty
+
+selectA = TestSelectA { source      = Expr (Column "source")
+                      , shake_power = Expr $ ((Column "magnitude") :: Column Number) $+ SodaVal (Number 4.5)
+                      , some_val    = Expr $ SodaVal "Foobar"
+                      , some_expr   = Expr $ SodaVal "Lorem" $++ SodaVal " ipsum"
+                      }
 {-
 data Earthquake =
     Earthquake { source :: String

@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-|
     Module      : Query
@@ -15,7 +16,6 @@ module Query
     ( NonNegative
     , Filter (Filter)
     , ($=)
-    , Select (Select, Alias)
     , Sorting (ASC, DESC)
     , Order (Order)
     , GroupElem (Groupify)
@@ -25,7 +25,9 @@ module Query
     , queryToParam
     ) where
 
-import Data.Function ((&))
+import Data.Aeson ((.:))
+import qualified Data.Aeson as Json
+import Data.Aeson.Types
 import Data.List
 import Data.Time.Calendar
 import Data.Time.Clock
@@ -51,10 +53,10 @@ infix 2 $=
 ($=) :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
 ($=) = Filter
 
--- |The type of the $select query part.
-data Select where
-    Select :: (SodaExpr m, SodaTypes a) => m a -> Select
-    Alias  :: (SodaExpr m, SodaTypes a) => m a -> String -> Select
+-- -- |The type of the $select query part.
+-- data Select where
+--     Select :: (SodaExpr m, SodaTypes a) => m a -> Select
+--     Alias  :: (SodaExpr m, SodaTypes a) => m a -> String -> Select
 
 -- |Used with the Order type to indicate if the order of a column should be ascending or descending.
 data Sorting = ASC | DESC
@@ -94,49 +96,51 @@ offset int
 -}
 
 -- Need to account for negative limit, which doesn't make sense, somehow.
+-- I think the type parameter makes more sense than an existential type, but we'll see. The type parameter sort of represents the return type I guess.
 -- |The type of the Query itself.
 -- The query is represented as a Haskell record type, and you can add to or modify a query made by the bindings by creating, adding to, and/or modifying a value of type Query.
-data Query = Query { filters  :: Maybe [Filter] -- Type with columns and contents
-                   , selects  :: Maybe [Select]
-                   , wheres   :: Maybe Where -- Is the lowercase where allowed?
-                   , orders   :: Maybe [Order]
-                   , groups   :: Maybe [GroupElem] -- Depends on the select clause. Also, might need an existential type.
-                   , having   :: Maybe Having -- Depends on the group clause. Similar to where clause.
-                   , limit    :: Maybe NonNegative
-                   , offset   :: Maybe NonNegative
-                   , search   :: Maybe String -- |$q parameter
-                   , subquery :: Maybe Query
-                   , bom      :: Maybe Bool
-                   }
+data Query a = Query { selects  :: Maybe a
+                     , filters  :: Maybe [Filter] -- Type with columns and contents
+                     , wheres   :: Maybe Where -- Is the lowercase where allowed?
+                     , orders   :: Maybe [Order]
+                     , groups   :: Maybe [GroupElem] -- Depends on the select clause. Also, might need an existential type.
+                     , having   :: Maybe Having -- Depends on the group clause. Similar to where clause.
+                     , limit    :: Maybe NonNegative
+                     , offset   :: Maybe NonNegative
+                     , search   :: Maybe String -- |$q parameter
+                     , subquery :: Maybe (Query a) -- Not sure what to do 
+                     , bom      :: Maybe Bool
+                     }
 
 -- |A useful value since we're often building queries from nothing.
-emptyQuery :: Query
+emptyQuery :: Query a
 emptyQuery = Query { filters  = Nothing
-                     , selects  = Nothing
-                     , wheres   = Nothing
-                     , orders   = Nothing
-                     , groups   = Nothing
-                     , having   = Nothing
-                     , limit    = Nothing
-                     , offset   = Nothing
-                     , search   = Nothing
-                     , subquery = Nothing
-                     , bom      = Nothing
-                     }
+                   , selects  = Nothing
+                   , wheres   = Nothing
+                   , orders   = Nothing
+                   , groups   = Nothing
+                   , having   = Nothing
+                   , limit    = Nothing
+                   , offset   = Nothing
+                   , search   = Nothing
+                   , subquery = Nothing
+                   , bom      = Nothing
+                   }
 
 -- I don't know if changing ifExists order would make it more performant
 -- Need to change up the namings of things.
 -- |Used for getting a query as part of a URL represented with a string. Not recommended to actually use, but provided for the URL string builder and just in case somebody wants it.
-queryToString :: Query -> UrlParam
+queryToString :: Query a -> UrlParam
 queryToString query = intercalate "&" $ map stringify (queryToParam query)
     where stringify (param, val) = param ++ "=" ++ val
 
 -- Should possibly be hidden after being imported into Soda.hs.
 -- |Creates the list of pairs of parameters and values that go into the URL.
-queryToParam :: Query -> [(String, String)]
-queryToParam query = filters' ++ selects' ++ orders' ++ groups' ++ limit' ++ offset' ++ search' ++ bom'
+queryToParam :: Query a -> [(String, String)]
+--queryToParam query = filters' ++ selects' ++ orders' ++ groups' ++ limit' ++ offset' ++ search' ++ bom'
+queryToParam query = filters' ++ orders' ++ groups' ++ limit' ++ offset' ++ search' ++ bom'
     where filters' = ifExists filtersToParam $ filters query
-          selects' = ifExists selectsToParam $ selects query
+          --selects' = ifExists selectsToParam $ selects query
           groups'  = ifExists groupsToParam  $ groups  query
           orders'  = ifExists ordersToParam  $ orders  query
           limit'   = ifExists limitToParam   $ limit   query
@@ -155,10 +159,10 @@ filtersToParam :: [Filter] -> [(String, String)]
 filtersToParam filters' = map filterToParam filters'
     where filterToParam (Filter col val) = ((toUrlParam col), (toUrlParam val))
 
-selectsToParam :: [Select] -> [(String, String)]
-selectsToParam selects' = [("$select", intercalate ", " $ map selectToParam selects')]
-    where selectToParam (Select col) = toUrlParam col
-          selectToParam (Alias col alias) = (toUrlParam col) ++ " as " ++ alias
+-- selectsToParam :: [Select] -> [(String, String)]
+-- selectsToParam selects' = [("$select", intercalate ", " $ map selectToParam selects')]
+--     where selectToParam (Select col) = toUrlParam col
+--           selectToParam (Alias col alias) = (toUrlParam col) ++ " as " ++ alias
 
 ordersToParam :: [Order] -> [(String, String)]
 ordersToParam orders' = [("$order", intercalate ", " $ map orderToParam orders')]
@@ -182,3 +186,10 @@ searchToParam search' = [("$q", search')]
 bomToParam :: Bool -> [(String, String)]
 bomToParam True = [("$$bom", "true")]
 bomToParam False = [("$$bom", "false")]
+
+-- Will probably move below to somewhere else.
+
+instance (SodaTypes a, FromJSON a) => Json.FromJSON (Expr a) where
+    parseJSON x = do
+        var <- (parseJSON x) :: Parser a
+        return (Expr (SodaVal var))
