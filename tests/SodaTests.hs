@@ -52,22 +52,29 @@ tests = testGroup "Soda Tests"
         response <- getStringBody testDomain testDataset testFormat query1
         response @?= result
     -- I'm testing this in SodaTests.hs but it's defined in Query.hs?
+    -- I know I can probably do this with fold or something instead.
     , testCase "Testing FromJSON decoding for SodaTypes" $
-        case (decode response :: Maybe TestSelectA) of
-            Just decoded -> do
-                getVal (source decoded) @?= getVal (source responseVal)
-                getVal (shake_power decoded) @?= getVal (shake_power responseVal)
-                getVal (some_val decoded) @?= getVal (some_val responseVal)
-                getVal (some_expr decoded) @?= getVal (some_expr responseVal)
+        case (decode response :: Maybe [TestSelectA]) of
+            Just decoded -> do 
+                eval <- sequence $ map (\row -> do
+                        getVal (source row) @?= getVal (source responseVal)
+                        getVal (shake_power row) @?= getVal (shake_power responseVal)
+                        getVal (some_val row) @?= getVal (some_val responseVal)
+                        getVal (some_expr row) @?= getVal (some_expr responseVal)
+                    ) decoded
+                return (head eval)
             _ -> do
                 False @? "Decoding returned Nothing"
     , testCase "Testing if the JSON is well formed" $
-        case (decode responseTest :: Maybe TestJson) of
+        case (decode responseTest :: Maybe [TestJson]) of
             Just decoded -> do
-                sourceA decoded @?= "ak"
-                shake_powerA decoded @?= 1.6
-                some_valA decoded @?= "36km W of Valdez, Alaska"
-                some_exprA decoded @?= "ak11243041"
+                eval <- sequence $ map (\row -> do
+                        sourceA row @?= "ak"
+                        shake_powerA row @?= 1.6
+                        some_valA row @?= "36km W of Valdez, Alaska"
+                        some_exprA row @?= "ak11243041"
+                    ) decoded
+                return (head eval)
             _ -> do
                 False @? "JSON malformed"
     ]
