@@ -136,6 +136,7 @@ instance SodaTypes Timestamp where
 data Point = Point { longitude :: Double
                    , latitude  :: Double
                    } deriving (Show)
+
 instance SodaTypes Point where
     toUrlPart point = "'POINT (" ++ (pointUPart point) ++ ")'"
 

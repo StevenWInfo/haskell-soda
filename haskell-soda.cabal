@@ -25,6 +25,8 @@ library
                      , req
                      , text
                      , aeson
+                     , vector
+                     , unordered-containers
   default-language:    Haskell2010
 
 test-suite haskell-soda-test
@@ -46,9 +48,11 @@ test-suite haskell-soda-test
                      , req
                      , time
                      , text
-                     , aeson
                      , http-client
                      , http-types
+                     , aeson
+                     , vector
+                     , unordered-containers
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 

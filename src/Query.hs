@@ -27,7 +27,9 @@ module Query
 
 import Data.Aeson ((.:))
 import qualified Data.Aeson as Json
-import Data.Aeson.Types
+import qualified Data.Aeson.Types as JTypes
+import qualified Data.Vector as V
+import qualified Data.HashMap.Strict as HM
 import Data.List
 import Data.Time.Calendar
 import Data.Time.Clock
@@ -188,8 +190,40 @@ bomToParam True = [("$$bom", "true")]
 bomToParam False = [("$$bom", "false")]
 
 -- Will probably move below to somewhere else.
+--
+-- Might have to import Data.Aeson.Instances
 
-instance (SodaTypes a, FromJSON a) => Json.FromJSON (Expr a) where
+instance (SodaTypes a, JTypes.FromJSON a) => Json.FromJSON (Expr a) where
     parseJSON x = do
-        var <- (parseJSON x) :: Parser a
-        return (Expr (SodaVal var))
+        val <- (JTypes.parseJSON x) :: JTypes.Parser a
+        return (Expr (SodaVal val))
+
+instance Json.FromJSON Money where
+    parseJSON a = do
+        b <- (JTypes.parseJSON a) :: JTypes.Parser Double
+        return (Money b)
+
+instance Json.FromJSON Number where
+    parseJSON a = do
+        b <- (JTypes.parseJSON a) :: JTypes.Parser Double
+        return (Number b)
+
+parsePoint :: Json.Value -> JTypes.Parser Point
+parsePoint (JTypes.Array arr) = do
+    long <- (JTypes.parseJSON $ (arr V.! 0)) :: JTypes.Parser Double
+    lat <- (JTypes.parseJSON $ (arr V.! 1)) :: JTypes.Parser Double
+    return (Point { longitude = long, latitude = lat })
+parsePoint _ = fail ("coordinates was not an array as expected")
+    
+
+-- Use the type parameter to add some extra checking maybe
+instance Json.FromJSON Point where
+    parseJSON = Json.withObject "Point" $ \o ->
+        case HM.lookup "coordinates" o of
+            Nothing -> fail ("key coordinates not present")
+            Just val -> parsePoint val
+
+-- What the JSON representation of Location is needs to be determined before writing FromJSON.
+
+--instance Json.FromJSON MultiPoint where
+    --parseJSON 
