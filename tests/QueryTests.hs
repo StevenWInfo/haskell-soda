@@ -23,8 +23,8 @@ tests = testGroup "Query Tests"
         (queryToString $ emptyQuery { filters = Just [ colFoo $= (SodaVal "Bar") ]}) @?= "Foo='Bar'"
     , testCase "Filter query test with a Soda Function." $
         (queryToString $ emptyQuery { filters = Just [ numCol $= avgCol ]}) @?= "Num=avg(Baz)"
-    --, testCase "Testing select parameter building." $
-        --(queryToString $ emptyQuery { selects = Just [ Select colFoo, Alias numCol "NumAlias" ]}) @?= "$select=Foo, Num as NumAlias"
+    , testCase "Testing select parameter building." $
+        (queryToString $ emptyQuery { selects = Just [ Select colFoo, Alias numCol "NumAlias" ]}) @?= "$select=Foo, Num as NumAlias"
     , testCase "Testing group parameter building." $
         (queryToString $ emptyQuery { groups = Just [ Groupify colFoo, Groupify numCol ]}) @?= "$group=Foo, Num"
     , testCase "Testing order parameter building." $
