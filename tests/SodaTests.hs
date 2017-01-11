@@ -54,8 +54,8 @@ tests = testGroup "Soda Tests"
     -- I'm testing this in SodaTests.hs but it's defined in Query.hs?
     -- I know I can probably do this with fold or something instead.
     , testCase "Testing FromJSON decoding for SodaTypes" $
-        case (decode response :: Maybe [TestSelectA]) of
-            Just decoded -> do 
+        case (eitherDecode response :: Either String [TestSelectA]) of
+            Right decoded -> do 
                 eval <- sequence $ map (\row -> do
                         getVal (source row) @?= getVal (source responseVal)
                         getVal (shake_power row) @?= getVal (shake_power responseVal)
@@ -63,8 +63,8 @@ tests = testGroup "Soda Tests"
                         getVal (some_expr row) @?= getVal (some_expr responseVal)
                     ) decoded
                 return (head eval)
-            _ -> do
-                False @? "Decoding returned Nothing"
+            Left err -> do
+                False @? "Decoding error: " ++ err
     , testCase "Testing if the JSON is well formed" $
         case (decode responseTest :: Maybe [TestJson]) of
             Just decoded -> do
@@ -77,6 +77,15 @@ tests = testGroup "Soda Tests"
                 return (head eval)
             _ -> do
                 False @? "JSON malformed"
+    , testCase "Testing if the JSON is well formed" $
+        case (decode rowTest :: Maybe TestJson) of
+            Just decoded -> do
+                sourceA decoded @?= "ak"
+                shake_powerA decoded @?= 1.6
+                some_valA decoded @?= "36km W of Valdez, Alaska"
+                some_exprA decoded @?= "ak11243041"
+            _ -> do
+                False @? "JSON malformed"
     ]
     where
         testDomain  = "soda.demo.socrata.com"
@@ -84,8 +93,9 @@ tests = testGroup "Soda Tests"
         testFormat  = JSON
         testQuery   = [("$where", "earthquake_id in('ak11243041', 'ak11246151', 'ak11246918')")]
         result      = "[{\"depth\":\"0\",\"earthquake_id\":\"ak11243041\",\"magnitude\":\"1.6\",\"number_of_stations\":\"6\",\"region\":\"36km W of Valdez, Alaska\",\"source\":\"ak\"}]\n"
-        response    = "[{\"some_expr\":\"ak11243041\",\"shake_power\":\"1.6\",\"some_val\":\"36km W of Valdez, Alaska\",\"source\":\"ak\"}]\n"
-        responseTest = "[{\"some_exprA\":\"ak11243041\",\"shake_powerA\":\"1.6\",\"some_valA\":\"36km W of Valdez, Alaska\",\"sourceA\":\"ak\"}]\n"
+        response    = "[{\"some_expr\":\"ak11243041\",\"shake_power\":\"1.6\",\"some_val\":\"36km W of Valdez, Alaska\",\"source\":\"ak\"}]"
+        responseTest = "[{\"some_exprA\":\"ak11243041\",\"shake_powerA\":\"1.6\",\"some_valA\":\"36km W of Valdez, Alaska\",\"sourceA\":\"ak\"}]"
+        rowTest = "{\"some_exprA\":\"ak11243041\",\"shake_powerA\":\"1.6\",\"some_valA\":\"36km W of Valdez, Alaska\",\"sourceA\":\"ak\"}"
         responseVal = TestSelectA { source = Expr . SodaVal $ "ak"
                                   , shake_power = Expr . SodaVal $ SodaNum 1.6
                                   , some_val = Expr . SodaVal $ "36km W of Valdez, Alaska"

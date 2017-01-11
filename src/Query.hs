@@ -202,13 +202,13 @@ instance (SodaTypes a, FromJSON a) => FromJSON (Expr a) where
 
 instance FromJSON Money where
     parseJSON a = do
-        b <- (parseJSON a) :: Parser Double
-        return (Money b)
+        b <- (parseJSON a) :: Parser String
+        return (Money (read b :: Double))
 
 instance FromJSON SodaNum where
     parseJSON a = do
-        b <- (parseJSON a) :: Parser Double
-        trace (show b) $ return (SodaNum b)
+        b <- (parseJSON a) :: Parser String
+        return (SodaNum (read b :: Double))
 
 parsePoint :: Value -> Parser Point
 parsePoint (Array arr) = do
