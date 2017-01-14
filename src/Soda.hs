@@ -22,7 +22,7 @@ module Soda
     ) where
 
 import qualified Data.ByteString.Lazy.Char8 as L8
---import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS8
 import System.IO
 import Data.List (foldl')
 import Data.Text (Text, pack, append)
@@ -131,7 +131,7 @@ type Response = [Row]
 getSodaResponse :: Domain -> DatasetID -> Query -> IO Response
 getSodaResponse domain datasetID query = do
     response <- getLbsResponse domain datasetID JSON (queryToParam query)
-    let body = L8.unpack $ responseBody response
+    let body = responseBody response
     let responseFields = getResponseFields response
     let responseTypes = getResponseTypes response
     let fieldInfo = zip responseFields responseTypes
@@ -140,18 +140,18 @@ getSodaResponse domain datasetID query = do
 -- Possibly throw an exception instead of empty?
 -- getResponseTypes :: ? -> [String]
 getResponseTypes response = case (responseHeader response "X-Soda2-Types") of
-    Just header -> (read (L8.unpack (header))) :: [String]
+    Just header -> (read (BS8.unpack (header))) :: [String]
     Nothing -> []
     
 -- getResponseFields :: ? -> [String]
 getResponseFields response = case (responseHeader response "X-Soda2-Fields") of
-    Just header -> (read (L8.unpack (header))) :: [String]
+    Just header -> (read (BS8.unpack (header))) :: [String]
     Nothing -> []
 
 --- Parsing stuff. Need better names. Also need to handle errors better than just default values.
 
 -- Need to consider responses that don't have fields for certain rows. Maybe make all fields be maybe.
-parseResponse :: [(String, String)] -> String -> Response
+parseResponse :: [(String, String)] -> L8.ByteString -> Response
 parseResponse fieldInfo body = case parseMaybe mainParser =<< decoded of
     Just resp -> resp
     Nothing -> []
