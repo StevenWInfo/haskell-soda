@@ -163,11 +163,11 @@ parseRows :: [(String, String)] -> Value -> Parser Row
 parseRows fieldInfo rowObj = withObject "Row" objToParser rowObj
     where objToParser o = foldM (parseField rowObj) [] fieldInfo
     
--- folded function
+-- folding function
 parseField :: Value -> Row -> (String, String) -> Parser Row
 parseField (Object obj) accum ((key, fieldType)) = case HM.lookup (pack key) obj of
-    Nothing  -> accum
-    Just val -> (fmap ((,) key) (parseReturnVal fieldType val)) : accum
+    Nothing  -> return accum
+    Just val -> (:) <$> (fmap ((,) key) (parseReturnVal fieldType val)) <*> (pure accum)
     {-
     Just val -> case parseMaybe (parseReturnVal fieldType) =<< val of
                      Nothing -> accum
@@ -180,13 +180,13 @@ parseReturnVal :: String -> Value -> Parser ReturnType
 parseReturnVal fieldType val = case fieldType of
     "checkbox"     -> fmap RCheckbox ((parseJSON val) :: Parser Checkbox)
     "money"        -> fmap RMoney ((parseJSON val) :: Parser Money)
-    "double"       -> fmap RDouble ((parseJSON val) :: Parser Double)
+    "double"       -> fail "Doubles don't work yet because of the format that SODA returns them in." -- fmap RDouble ((parseJSON val) :: Parser Double)
     "number"       -> fmap RSodaNum ((parseJSON val) :: Parser SodaNum)
     "text"         -> fmap RSodaText ((parseJSON val) :: Parser SodaText)
     "timestamp"    -> fmap RTimestamp ((parseJSON val) :: Parser Timestamp)
     "point"        -> fmap RPoint ((parseJSON val) :: Parser Point)
     "multipoint"   -> fmap RMultiPoint ((parseJSON val) :: Parser MultiPoint)
-    "location"     -> fmap RLocation ((parseJSON val) :: Parser Location)
+    "location"     -> fail "Not sure how to parse location types" -- fmap RLocation ((parseJSON val) :: Parser Location)
     "line"         -> fmap RLine ((parseJSON val) :: Parser Line)
     "multiline"    -> fmap RMultiLine ((parseJSON val) :: Parser MultiLine)
     "polygon"      -> fmap RPolygon ((parseJSON val) :: Parser Polygon)
