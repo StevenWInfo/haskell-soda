@@ -17,20 +17,26 @@ module Soda
     , DatasetID
     , RawParameters
     , urlBuilder
-    , getStringResponse
+    , getLbsResponse
     , getStringBody
     ) where
 
 import qualified Data.ByteString.Lazy.Char8 as L8
+--import qualified Data.ByteString as BS
 import System.IO
+import Data.List (foldl')
 import Data.Text (Text, pack, append)
 import Data.Monoid ((<>), Monoid)
 --import GHC.Generics
---import Data.Aeson
+import Data.Aeson
+import Data.Aeson.Types
+import qualified Data.Vector as V
+import qualified Data.HashMap.Strict as HM
 import Network.HTTP.Req
 import Control.Exception
 
 import Query
+import Datatypes
 
 {-
 #Notes
@@ -54,6 +60,7 @@ type RawParameters = [(String, String)]
 
 -- |Specifies what the domain of a request URL should be.
 type Domain        = String
+-- Maybe just call it Dataset?
 -- |Used for specifying the ID of the dataset that you want to query.
 type DatasetID     = String
 
@@ -76,9 +83,9 @@ instance MonadHttp IO where
 
 -- Misnamed right now because the output is an LbsResponse
 -- Also, probably don't need to use do notation.
--- getStringResponse :: Domain -> DatasetID -> ResponseFormat -> RawParameters -> IO String
+-- getLbsResponse :: Domain -> DatasetID -> ResponseFormat -> RawParameters -> IO String
 -- |Gets the whole response. Misnamed right now because it is actually lazy byte strings, and it's returning a response data structure.
-getStringResponse domain datasetID format query = do
+getLbsResponse domain datasetID format query = do
     let url = urlBuilder domain datasetID format
     let param = foldr1 (<>) $ map (\(x,y) -> (pack x) =: y) query
     response <- req GET url NoReqBody lbsResponse param
@@ -87,7 +94,7 @@ getStringResponse domain datasetID format query = do
 -- (should probably take just the Query type)
 -- |Gets the body of a response from a query given the Domain, DatasetID, ResponseFormat, and query parameters as a list of tuples.
 getStringBody :: Domain -> DatasetID -> ResponseFormat -> RawParameters -> IO String
-getStringBody domain datasetID format query = (getStringResponse domain datasetID format query) >>= (return . L8.unpack . responseBody)
+getStringBody domain datasetID format query = (getLbsResponse domain datasetID format query) >>= (return . L8.unpack . responseBody)
 
 -- Maybe this should also take the parameters.
 --urlBuilder :: Domain -> DatasetID -> ResponseFormat -> Url Https
@@ -98,3 +105,90 @@ urlBuilder domain datasetID format = https domain' /: "resource" /: (datasetID' 
           format' = pack (formatToUrl format)
 
 -- Create a string URL builder.
+
+-- Change name.
+data ReturnType = RCheckbox Checkbox
+                | RMoney Money
+                | RDouble Double
+                | RSodaNum SodaNum
+                | RSodaText SodaText
+                | RTimestamp Timestamp
+                | RPoint Point
+                | RMultiPoint MultiPoint
+                | RLocation Location
+                | RLine Line
+                | RMultiLine MultiLine
+                | RPolygon Polygon
+                | RMultiPolygon MultiPolygon
+
+type Row = [(String, ReturnType)]
+
+type Response = [Row]
+
+-- IO Response?
+-- TODO try and catch the responce and put into either. Could also use req's settings to change automatically into either.
+-- Return an IO Either response (or probably EitherT IO response)
+getSodaResponse :: Domain -> DatasetID -> Query -> IO Response
+getSodaResponse domain datasetID query = do
+    response <- getLbsResponse domain datasetID JSON (queryToParam query)
+    let body = L8.unpack $ responseBody response
+    let responseFields = getResponseFields response
+    let responseTypes = getResponseTypes response
+    let fieldInfo = zip responseFields responseTypes
+    return $ parseResponse fieldInfo body
+
+-- Possibly throw an exception instead of empty?
+-- getResponseTypes :: ? -> [String]
+getResponseTypes response = case (responseHeader response "X-Soda2-Types") of
+    Just header -> (read (L8.unpack (header))) :: [String]
+    Nothing -> []
+    
+-- getResponseFields :: ? -> [String]
+getResponseFields response = case (responseHeader response "X-Soda2-Fields") of
+    Just header -> (read (L8.unpack (header))) :: [String]
+    Nothing -> []
+
+--- Parsing stuff. Need better names. Also need to handle errors better than just default values.
+
+-- Need to consider responses that don't have fields for certain rows. Maybe make all fields be maybe.
+parseResponse :: [(String, String)] -> String -> Response
+parseResponse fieldInfo body = case parseMaybe mainParser =<< decoded of
+    Just resp -> resp
+    Nothing -> []
+    where decoded = case ((decode body) :: Maybe Value) of
+                        Just val -> val
+                        Nothing -> Null
+          parseArray fInfo arr = sequence $ mapM (parseRows fInfo) (V.toList arr)
+          mainParser = withArray "Array of dataset rows" (parseArray fieldInfo) decoded
+
+parseRows :: [(String, String)] -> Value -> Parser Row
+parseRows fieldInfo rowObj = withObject "Row" $ \o ->
+    sequence $ foldl' (parseField rowObj) [] fieldInfo
+    
+parseField :: Value -> Row -> (String, String) -> Parser Row
+parseField rowObj accum ((key, fieldType)) = case HM.lookup key rowObj of
+    Nothing  -> accum
+    Just val -> (key, (parseReturnVal fieldType val)) : accum
+    {-
+    Just val -> case parseMaybe (parseReturnVal fieldType) =<< val of
+                     Nothing -> accum
+                     Just returnVal -> (key, returnVal) : accum
+                     -}
+                   
+
+-- There's probably a simpler and terser way to do this.
+parseReturnVal :: String -> Value -> Parser ReturnType
+parseReturnVal fieldType val = case fieldType of
+    "checkbox"     -> fmap RCheckbox ((parseJSON val) :: Parser Checkbox)
+    "money"        -> fmap RMoney ((parseJSON val) :: Parser Money)
+    "double"       -> fmap RDouble ((parseJSON val) :: Parser Double)
+    "number"       -> fmap RSodaNum ((parseJSON val) :: Parser SodaNum)
+    "text"         -> fmap RSodaText ((parseJSON val) :: Parser SodaText)
+    "timestamp"    -> fmap RTimestamp ((parseJSON val) :: Parser Timestamp)
+    "point"        -> fmap RPoint ((parseJSON val) :: Parser Point)
+    "multipoint"   -> fmap RMultiPoint ((parseJSON val) :: Parser MultiPoint)
+    "location"     -> fmap RLocation ((parseJSON val) :: Parser Location)
+    "line"         -> fmap RLine ((parseJSON val) :: Parser Line)
+    "multiline"    -> fmap RMultiLine ((parseJSON val) :: Parser MultiLine)
+    "polygon"      -> fmap RPolygon ((parseJSON val) :: Parser Polygon)
+    "multipolygon" -> fmap RMultiPolygon ((parseJSON val) :: Parser MultiPolygon)

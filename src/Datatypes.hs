@@ -49,7 +49,8 @@ import Data.Time.Format
 -- |Indicates what has been interpreted to be put into a URL. The name could possibly use some improvement.
 type UrlParam = String
 
-data SodaError = BadLower deriving (Eq, Show)
+-- Replace Misc with actual things later
+data SodaError = BadLower | Misc deriving (Eq, Show)
 
 -- Maybe make an exportable super or sub typeclass so they can use toUrlParam but can't create any instances of type.
 -- |The class of all things that can represent a SODA query level type. These include concrete values, columns, and SODA functions.

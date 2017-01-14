@@ -216,7 +216,6 @@ parsePoint (Array arr) = do
     lat <- (parseJSON $ (arr V.! 1)) :: Parser Double
     return (Point { longitude = long, latitude = lat })
 parsePoint _ = fail ("coordinates was not an array as expected")
-    
 
 -- Use the type parameter to add some extra checking maybe
 instance FromJSON Point where

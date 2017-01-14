@@ -12,6 +12,8 @@ import GHC.Generics
 import Data.Aeson ((.:))
 import Data.Aeson
 import Data.Function ((&))
+import Data.Maybe (fromJust)
+import qualified Data.ByteString.Char8 as BS
 import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Types.Status as Status
 import Network.HTTP.Req
@@ -32,15 +34,22 @@ tests = testGroup "Soda Tests"
         contents <- readFile "tests/data/6yvf-kk3nLimit3.json"
         response <- getStringBody testDomain testDataset testFormat testQuery
         response @?= (init contents)
+    , testCase "Trying out getting header out of response." $ do
+        response <- try (getLbsResponse testDomain testDataset testFormat testQuery) :: IO (Either HttpException LbsResponse)
+        case response of
+            Left ex -> do
+                False @? "Shouldn't have thrown exception."
+            Right foo -> do
+                ((read (BS.unpack (fromJust $ responseHeader foo "X-Soda2-Types"))) :: [String]) @?= ["Something"]
     , testCase "Test 404 response" $ do
-        response <- try (getStringResponse (tail testDomain) testDataset testFormat testQuery) :: IO (Either HttpException LbsResponse)
+        response <- try (getLbsResponse (tail testDomain) testDataset testFormat testQuery) :: IO (Either HttpException LbsResponse)
         case response of
             Left ex -> do 
                           True @? "Threw exception" -- unnecessary
             Right foo -> do
                             False @? "Should have thrown exception"
     , testCase "Test 404 response" $ do
-        response <- tryJust selectNotFound (getStringResponse ((tail . tail) testDomain) testDataset testFormat testQuery) -- :: IO (Either HttpException LbsResponse)
+        response <- tryJust selectNotFound (getLbsResponse ((tail . tail) testDomain) testDataset testFormat testQuery) -- :: IO (Either HttpException LbsResponse)
         case response of
             Left code -> do 
                             code @?= Status.status404
