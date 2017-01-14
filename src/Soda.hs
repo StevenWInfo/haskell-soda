@@ -34,6 +34,7 @@ import qualified Data.Vector as V
 import qualified Data.HashMap.Strict as HM
 import Network.HTTP.Req
 import Control.Exception
+import Control.Monad (foldM)
 
 import Query
 import Datatypes
@@ -152,23 +153,21 @@ getResponseFields response = case (responseHeader response "X-Soda2-Fields") of
 
 -- Need to consider responses that don't have fields for certain rows. Maybe make all fields be maybe.
 parseResponse :: [(String, String)] -> L8.ByteString -> Response
-parseResponse fieldInfo body = case parseMaybe mainParser =<< decoded of
+parseResponse fieldInfo body = case parseMaybe mainParser =<< decode body of
     Just resp -> resp
     Nothing -> []
-    where decoded = case ((decode body) :: Maybe Value) of
-                        Just val -> val
-                        Nothing -> Null
-          parseArray fInfo arr = sequence $ mapM (parseRows fInfo) (V.toList arr)
-          mainParser = withArray "Array of dataset rows" (parseArray fieldInfo) decoded
+    where parseArray fInfo arr = mapM (parseRows fInfo) (V.toList arr)
+          mainParser = withArray "Array of dataset rows" (parseArray fieldInfo)
 
 parseRows :: [(String, String)] -> Value -> Parser Row
-parseRows fieldInfo rowObj = withObject "Row" $ \o ->
-    sequence $ foldl' (parseField rowObj) [] fieldInfo
+parseRows fieldInfo rowObj = withObject "Row" objToParser rowObj
+    where objToParser o = foldM (parseField rowObj) [] fieldInfo
     
+-- folded function
 parseField :: Value -> Row -> (String, String) -> Parser Row
-parseField rowObj accum ((key, fieldType)) = case HM.lookup key rowObj of
+parseField (Object obj) accum ((key, fieldType)) = case HM.lookup (pack key) obj of
     Nothing  -> accum
-    Just val -> (key, (parseReturnVal fieldType val)) : accum
+    Just val -> (fmap ((,) key) (parseReturnVal fieldType val)) : accum
     {-
     Just val -> case parseMaybe (parseReturnVal fieldType) =<< val of
                      Nothing -> accum
