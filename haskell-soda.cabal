@@ -2,15 +2,14 @@ name:                haskell-soda
 version:             0.1.0.0
 synopsis:            Haskell bindings for the Socrata Open Data API (SODA)
 description:         These are Haskell bindings for the Socrata Open Data API (SODA).
-homepage:            https://github.com/githubuser/haskell-soda#readme
-license:             BSD3
-license-file:        LICENSE
+homepage:            https://github.com/githubuser/haskell-soda
+license:             MIT
+license-file:        LICENSE.md
 author:              Steven W
-maintainer:          example@example.com
+maintainer:          StevenW.Info@gmail.com
 copyright:           2016 Steven W
 category:            Web
 build-type:          Simple
--- extra-source-files:
 cabal-version:       >=1.10
 
 library
@@ -38,8 +37,6 @@ test-suite haskell-soda-test
                      , DatatypeTests
                      , SodaFunctionTests
   build-depends:       tasty
-                     --, Quickcheck
-                     --, HUnit
                      , tasty-hunit
                      , tasty-quickcheck
                      , base

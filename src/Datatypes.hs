@@ -6,6 +6,7 @@
     Module      : Datatypes
     Description : SODA Datatypes
     Copyright   : (c) Steven W
+    License     : MIT
     Maintainer  : Steven W <StevenW.Info@gmail.com>
     Stability   : Unstable
 

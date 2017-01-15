@@ -6,6 +6,7 @@
     Module      : Query
     Description : SODA Query Builders
     Copyright   : (c) Steven W
+    License     : MIT
     Maintainer  : Steven W <StevenW.Info@gmail.com>
     Stability   : Unstable
 
