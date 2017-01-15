@@ -47,6 +47,7 @@ type RawParameters = [(String, String)]
 
 -- |Specifies what the domain of a request URL should be.
 type Domain        = String
+
 -- Maybe just call it Dataset?
 -- |Used for specifying the ID of the dataset that you want to query.
 type DatasetID     = String
@@ -91,7 +92,7 @@ urlBuilder domain datasetID format = https domain' /: "resource" /: (datasetID' 
 
 -- Change name.
 -- |The type to allow you to determine what type the field is being returned as.
-data ReturnType = RCheckbox Checkbox
+data ReturnValue = RCheckbox Checkbox
                 | RMoney Money
                 | RDouble Double
                 | RSodaNum SodaNum
@@ -106,8 +107,8 @@ data ReturnType = RCheckbox Checkbox
                 | RMultiPolygon MultiPolygon
                 deriving (Show, Eq)
 
--- |The type of the returned field information. The string on the left is the key and the ReturnType on the right is the value for that field.
-type Field = (String, ReturnType)
+-- |The type of the returned field information. The string on the left is the key and the ReturnValue on the right is the value for that field.
+type Field = (String, ReturnValue)
 
 -- |The type of a row of returned data.
 type Row = [Field]
@@ -162,7 +163,7 @@ parseField (Object obj) accum ((key, fieldType)) = case HM.lookup (pack key) obj
 
 -- There's probably a simpler and terser way to do this.
 -- |Uses the type information included in the header of the response to tell parseJSON what types to parse the JSON into.
-parseReturnVal :: String -> Value -> Parser ReturnType
+parseReturnVal :: String -> Value -> Parser ReturnValue
 parseReturnVal fieldType val = case fieldType of
     "checkbox"     -> fmap RCheckbox ((parseJSON val) :: Parser Checkbox)
     "money"        -> fmap RMoney ((parseJSON val) :: Parser Money)
