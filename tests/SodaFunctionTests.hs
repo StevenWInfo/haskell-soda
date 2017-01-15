@@ -13,7 +13,7 @@ import Datatypes
 import SodaFunctions
 
 -- The double whammy of having to put in SodaVal and the Double type decleration is really frustrating.
--- I suppose I could have SodaVal NOT be a GADT and have seperate constructors for all of them. Then I think users could have overloadedStrings I think and I don't think a type decleration for double would be required. I could also get rid of the newtypes for Number and Money and just have different data constructors. I could get rid of the SodaTypes typeclass which would simplify things and have a single toUrlPart function rather than seperated instances. It might also be nice in a way because then it is quite visible and explicit what types users are putting in (although not having to indicate the type would probably be nicer).
+-- I suppose I could have SodaVal NOT be a GADT and have seperate constructors for all of them. Then I think users could have overloadedStrings I think and I don't think a type decleration for double would be required. I could also get rid of the newtypes for Number and Money and just have different data constructors. I could get rid of the SodaType typeclass which would simplify things and have a single toUrlPart function rather than seperated instances. It might also be nice in a way because then it is quite visible and explicit what types users are putting in (although not having to indicate the type would probably be nicer).
 
 tests :: TestTree
 tests = testGroup "Soda Function Tests"
@@ -32,7 +32,7 @@ tests = testGroup "Soda Function Tests"
     , testCase "Troublesome within_circle function." $
         (toUrlParam $ WithinCircle loc (sn 45.23) (sn 55.8) (sn 45.2)) @?= "within_circle(some_place, 45.23, 55.8, 45.2)"
     ]
-    where sv :: (SodaTypes a) => a -> SodaVal a -- Note to self: GADTs are finicky
+    where sv :: (SodaType a) => a -> SodaVal a -- Note to self: GADTs are finicky
           sv     = SodaVal
           sd :: Double -> SodaVal Double -- Note to self: GADTs are *very* finicky
           sd a   = sv a

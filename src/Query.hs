@@ -51,17 +51,17 @@ type NonNegative = Int
 
 -- |The type of a simple filter query part.
 data Filter where
-    Filter :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
+    Filter :: (SodaType a, SodaExpr m) => (Column a) -> (m a) -> Filter
 
 -- |A little utility infix operator which can be used to make creating queries look a little more like a natural SODA query.
 infix 2 $=
-($=) :: (SodaTypes a, SodaExpr m) => (Column a) -> (m a) -> Filter
+($=) :: (SodaType a, SodaExpr m) => (Column a) -> (m a) -> Filter
 ($=) = Filter
 
 -- |The type of the $select query part.
 data Select where
-    Select :: (SodaExpr m, SodaTypes a) => m a -> Select
-    Alias  :: (SodaExpr m, SodaTypes a) => m a -> String -> Select
+    Select :: (SodaExpr m, SodaType a) => m a -> Select
+    Alias  :: (SodaExpr m, SodaType a) => m a -> String -> Select
 
 -- |Used with the Order type to indicate if the order of a column should be ascending or descending.
 data Sorting = ASC | DESC
@@ -69,7 +69,7 @@ data Sorting = ASC | DESC
 -- Could possibly be confused with Ord class.
 -- |The type of the $order query part.
 data Order where
-    Order :: (SodaTypes a) => Column a -> Sorting -> Order
+    Order :: (SodaType a) => Column a -> Sorting -> Order
 
 -- Check at runtime for Nothing/null as a literal value, and to make sure there aren't any aggregates.
 -- |The type of the $where query part.
@@ -86,7 +86,7 @@ data Having where
 -- Also, for some reason, this is completely inconsistant with the other query parts.
 -- |The type of the $group query part.
 data GroupElem where
-    Groupify :: SodaTypes sodatype => Column sodatype -> GroupElem
+    Groupify :: SodaType sodatype => Column sodatype -> GroupElem
 
 {-
 limit :: Int -> Maybe Query
@@ -195,7 +195,7 @@ bomToParam False = [("$$bom", "false")]
 --
 -- Might have to import Data.Aeson.Instances
 
-instance (SodaTypes a, FromJSON a) => FromJSON (Expr a) where
+instance (SodaType a, FromJSON a) => FromJSON (Expr a) where
     parseJSON x = do
         val <- (parseJSON x) :: Parser a
         return (Expr (SodaVal val))
