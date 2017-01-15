@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric #-}
 
 {-|
     Module      : Soda
@@ -20,41 +19,27 @@ module Soda
     , getLbsResponse
     , getStringBody
     , getSodaResponse
+    , Field
+    , Row
+    , Response
     ) where
 
+import System.IO
 import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Data.ByteString.Char8 as BS8
-import System.IO
 import Data.List (foldl')
 import Data.Text (Text, pack, append)
 import Data.Monoid ((<>), Monoid)
---import GHC.Generics
 import Data.Aeson
 import Data.Aeson.Types
 import qualified Data.Vector as V
 import qualified Data.HashMap.Strict as HM
-import Network.HTTP.Req
 import Control.Exception
 import Control.Monad (foldM)
+import Network.HTTP.Req
 
 import Query
 import Datatypes
-
-{-
-#Notes
-
-- Might want to provide a way to replace any non-string piece of the query with a string just to make it more flexible
-    - Also might want to be able to return it in several data types as well.
-
-- (Look at other SODA libraries to get ideas)
-
-- May want to rename this to network or something.
-
-##todo
-
-- Handle metadata and other data
-- Have some way to run raw queries and turn complete or partial EDSL queries into raw queries.
--}
 
 -- Not sure if I should even export this.
 -- |The type that specifies what the parameters are in the request URL. I've made it public so that you can make any call to a SODA, but it isn't recommended. Skipping over using the Query type gets rid of a lot of the compile time guarantees provided by this library.
@@ -81,10 +66,8 @@ formatToUrl XML     = "xml"
 instance MonadHttp IO where
   handleHttpException = throwIO
 
--- For the function which interprets directly into Haskell values, we don't need the response format since it won't affect what they get. We can always just use JSON or something.
-
--- Misnamed right now because the output is an LbsResponse
--- Also, probably don't need to use do notation.
+-- Todo: put a type declaration on this.
+-- Probably don't need to use do notation.
 -- getLbsResponse :: Domain -> DatasetID -> ResponseFormat -> RawParameters -> IO String
 -- |Gets the whole response. Misnamed right now because it is actually lazy byte strings, and it's returning a response data structure.
 getLbsResponse domain datasetID format query = do
@@ -98,7 +81,7 @@ getLbsResponse domain datasetID format query = do
 getStringBody :: Domain -> DatasetID -> ResponseFormat -> RawParameters -> IO String
 getStringBody domain datasetID format query = (getLbsResponse domain datasetID format query) >>= (return . L8.unpack . responseBody)
 
--- Maybe this should also take the parameters.
+-- Possibly shouldn't export this, although I suppose exposing low level stuff could be useful if a user can't do something with the main functions.
 --urlBuilder :: Domain -> DatasetID -> ResponseFormat -> Url Https
 -- |Builds the non-parameter part of the URL out of the Domain, DatasetID, and ResponseFormat.
 urlBuilder domain datasetID format = https domain' /: "resource" /: (datasetID' `append` "." `append` format')
@@ -106,9 +89,8 @@ urlBuilder domain datasetID format = https domain' /: "resource" /: (datasetID' 
           datasetID' = pack datasetID
           format' = pack (formatToUrl format)
 
--- Create a string URL builder.
-
 -- Change name.
+-- |The type to allow you to determine what type the field is being returned as.
 data ReturnType = RCheckbox Checkbox
                 | RMoney Money
                 | RDouble Double
@@ -124,13 +106,16 @@ data ReturnType = RCheckbox Checkbox
                 | RMultiPolygon MultiPolygon
                 deriving (Show, Eq)
 
-type Row = [(String, ReturnType)]
+-- |The type of the returned field information. The string on the left is the key and the ReturnType on the right is the value for that field.
+type Field = (String, ReturnType)
 
+-- |The type of a row of returned data.
+type Row = [Field]
+
+-- |The type of the response which is all of the rows.
 type Response = [Row]
 
--- IO Response?
--- TODO try and catch the responce and put into either. Could also use req's settings to change automatically into either.
--- Return an IO Either response (or probably EitherT IO response)
+-- |The main way to query information from the Socrata Open Data API. Give it a domain, datasetID, and Query, and it will give you a response interpreted in the established Haskell versions of SODA datatypes.
 getSodaResponse :: Domain -> DatasetID -> Query -> IO Response
 getSodaResponse domain datasetID query = do
     response <- getLbsResponse domain datasetID JSON (queryToParam query)
@@ -142,18 +127,20 @@ getSodaResponse domain datasetID query = do
 
 -- Possibly throw an exception instead of empty?
 -- getResponseTypes :: ? -> [String]
+-- |Gets the types of the fields which SODA conveniently includes in the header of its response.
 getResponseTypes response = case (responseHeader response "X-Soda2-Types") of
     Just header -> (read (BS8.unpack (header))) :: [String]
     Nothing -> []
     
 -- getResponseFields :: ? -> [String]
+-- |Gets the names of the fields included in the response.
 getResponseFields response = case (responseHeader response "X-Soda2-Fields") of
     Just header -> (read (BS8.unpack (header))) :: [String]
     Nothing -> []
 
---- Parsing stuff. Need better names. Also need to handle errors better than just default values.
+--- Parsing stuff. Possibly could use better names. Also need to handle errors better than just default values.
 
--- Need to consider responses that don't have fields for certain rows. Maybe make all fields be maybe.
+-- |Given the information about all of the fields and the ByteString body, returns a response.
 parseResponse :: [(String, String)] -> L8.ByteString -> Response
 parseResponse fieldInfo body = case parseMaybe mainParser =<< decode body of
     Just resp -> resp
@@ -161,11 +148,12 @@ parseResponse fieldInfo body = case parseMaybe mainParser =<< decode body of
     where parseArray fInfo arr = mapM (parseRows fInfo) (V.toList arr)
           mainParser = withArray "Array of dataset rows" (parseArray fieldInfo)
 
+-- |Given the info for all fields, and the aeson object value for a row, parse the row into Haskell values.
 parseRows :: [(String, String)] -> Value -> Parser Row
 parseRows fieldInfo rowObj = withObject "Row" objToParser rowObj
     where objToParser o = foldM (parseField rowObj) [] fieldInfo
     
--- folding function
+-- |Folding function which, given the aeson object value for a row, a potentially partially parsed row, and the metadata information for a field, returns the parsed row with the newly parsed field added to it.
 parseField :: Value -> Row -> (String, String) -> Parser Row
 parseField (Object obj) accum ((key, fieldType)) = case HM.lookup (pack key) obj of
     Nothing  -> return accum
@@ -173,6 +161,7 @@ parseField (Object obj) accum ((key, fieldType)) = case HM.lookup (pack key) obj
                    
 
 -- There's probably a simpler and terser way to do this.
+-- |Uses the type information included in the header of the response to tell parseJSON what types to parse the JSON into.
 parseReturnVal :: String -> Value -> Parser ReturnType
 parseReturnVal fieldType val = case fieldType of
     "checkbox"     -> fmap RCheckbox ((parseJSON val) :: Parser Checkbox)
