@@ -95,6 +95,9 @@ tests = testGroup "Soda Tests"
                 some_exprA decoded @?= "ak11243041"
             _ -> do
                 False @? "JSON malformed"
+    , testCase "Testing full API call" $ do
+        theResponse <- getSodaResponse testDomain testDataset $ emptyQuery { filters = Just [ (Column "magnitude" :: Column SodaNum) $= (SodaVal $ SodaNum 1.6) ], limit = Just 1 }
+        (show theResponse) @?= "Foobar"
     ]
     where
         testDomain  = "soda.demo.socrata.com"

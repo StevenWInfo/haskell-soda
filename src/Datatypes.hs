@@ -163,13 +163,13 @@ data USAddress = USAddress { address :: String
                            , city    :: String
                            , state   :: String
                            , zipCode :: String
-                           } deriving (Eq)
+                           } deriving (Show, Eq)
 
 -- Use record syntax?
 -- One of the developers said on stack overflow that there is no representation for location types in things like a simple filter.
 -- Should perhaps throw an error if toUrlPart is called for location, because it never should be.
 -- |Corresponds with <https://dev.socrata.com/docs/datatypes/location.html SODA's Location type>. According to the SODA documentation, location is a legacy datatype so it is discouraged from being used and some SODA functions available for the point datatype are not available for the location datatype.
-data Location = Location (Maybe Point) (Maybe USAddress) deriving (Eq)
+data Location = Location (Maybe Point) (Maybe USAddress) deriving (Show, Eq)
 instance SodaTypes Location where
     toUrlPart _ = ""
                    
@@ -185,7 +185,7 @@ instance SodaTypes MultiLine where
     toUrlPart lines = "'MULTILINESTRING " ++ (linesUPart $ map getLinePoints lines) ++ "'"
 
 -- |Corresponds with <https://dev.socrata.com/docs/datatypes/polygon.html SODA's Polygon type>.
-newtype Polygon = Polygon { getPolyPoints :: [[Point]] } deriving (Eq)
+newtype Polygon = Polygon { getPolyPoints :: [[Point]] } deriving (Show, Eq)
 instance SodaTypes Polygon where
     toUrlPart (Polygon lines) = "'POLYGON " ++ (linesUPart lines) ++ "'"
 

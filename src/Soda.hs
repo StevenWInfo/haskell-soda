@@ -19,6 +19,7 @@ module Soda
     , urlBuilder
     , getLbsResponse
     , getStringBody
+    , getSodaResponse
     ) where
 
 import qualified Data.ByteString.Lazy.Char8 as L8
@@ -121,6 +122,7 @@ data ReturnType = RCheckbox Checkbox
                 | RMultiLine MultiLine
                 | RPolygon Polygon
                 | RMultiPolygon MultiPolygon
+                deriving (Show, Eq)
 
 type Row = [(String, ReturnType)]
 
@@ -168,11 +170,6 @@ parseField :: Value -> Row -> (String, String) -> Parser Row
 parseField (Object obj) accum ((key, fieldType)) = case HM.lookup (pack key) obj of
     Nothing  -> return accum
     Just val -> (:) <$> (fmap ((,) key) (parseReturnVal fieldType val)) <*> (pure accum)
-    {-
-    Just val -> case parseMaybe (parseReturnVal fieldType) =<< val of
-                     Nothing -> accum
-                     Just returnVal -> (key, returnVal) : accum
-                     -}
                    
 
 -- There's probably a simpler and terser way to do this.
