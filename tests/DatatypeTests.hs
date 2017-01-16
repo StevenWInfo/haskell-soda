@@ -28,8 +28,6 @@ tests = testGroup "Datatype Tests"
         (toUrlParam . SodaVal . posixSecondsToUTCTime $ fromIntegral 1483426032) @?= "2017-01-03T06:47:12.000"
     , testCase "Testing what point looks like in a URL" $
         (toUrlParam . SodaVal $ Point { longitude = -87.653274, latitude = 41.936172}) @?= "'POINT (-87.653274 41.936172)'"
-    , testCase "Testing non-case of Location which shouldn't be represented" $
-        (toUrlParam . SodaVal $ Location (Just $ point (-80.1) 41.9) (Just $ USAddress {address = "Foo", city = "Anywhere", state = "Upper Montana", zipCode = "55555"})) @?= ""
     , testCase "Testing what line looks like in a URL" $
         (toUrlParam . SodaVal $ Line [point (-87.653274) 41.936172, point (-80.5) 40.4]) @?= "'LINESTRING (-87.653274 41.936172, -80.5 40.4)'"
     , testCase "Testing what multiline looks like in a URL" $

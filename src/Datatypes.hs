@@ -33,8 +33,7 @@ module Datatypes
     , Timestamp
     , Point (..)
     , MultiPoint
-    , Location (..)
-    , USAddress (..)
+    , Location
     , Line (..)
     , MultiLine
     , Polygon (..)
@@ -159,6 +158,7 @@ instance SodaType MultiPoint where
     toUrlPart points = "'MULTIPOINT " ++ (pointsUPart points) ++ "'"
 
 -- Possibly restrict the values used for these.
+-- Since the constructor for location is currently not exported, there's currently no reason to export this.
 -- |Used as part of the Location type.
 data USAddress = USAddress { address :: String
                            , city    :: String
@@ -168,8 +168,8 @@ data USAddress = USAddress { address :: String
 
 -- Use record syntax?
 -- One of the developers said on stack overflow that there is no representation for location types in things like a simple filter.
--- Should perhaps throw an error if toUrlPart is called for location, because it never should be.
--- |Corresponds with <https://dev.socrata.com/docs/datatypes/location.html SODA's Location type>. According to the SODA documentation, location is a legacy datatype so it is discouraged from being used and some SODA functions available for the point datatype are not available for the location datatype.
+-- Since we're not exporting the constructor and it isn't ever used, then the type definition doesn't really matter.
+-- |Corresponds with <https://dev.socrata.com/docs/datatypes/location.html SODA's Location type>. According to the SODA documentation, location is a legacy datatype so it is discouraged from being used and some SODA functions available for the point datatype are not available for the location datatype. The constructor is not exported because there the library currently doesn't know how to represent them in the URL
 data Location = Location (Maybe Point) (Maybe USAddress) deriving (Show, Eq)
 instance SodaType Location where
     toUrlPart _ = ""
