@@ -25,6 +25,9 @@ module Datatypes
     , Column (Column)
     , SodaVal (SodaVal)
     , SodaType
+    , SodaNumeric
+    , SodaPseudoNumeric
+    , SodaOrd
     -- * Haskell types corresponding to SODA Types
     , Checkbox
     , Money (..)
@@ -102,6 +105,18 @@ instance SodaExpr SodaVal where
     toUrlParam (SodaVal val) = toUrlPart val
     lower (SodaVal a) = Right a
 
+-- Possibly differentiate this and SodaNum more.
+-- |Not to be confused with SodaNum, this is a class with Doubles, Number, and Money in it because these three types can interact.
+class (SodaType a) => SodaNumeric a
+
+-- |I'll admit, I named this one this way for the wordplay. This class has Doubles, Number, Money, Timestamp, and SodaText. It's used in Min, Max, and Sum.
+class (SodaType a) => SodaPseudoNumeric a
+
+class (SodaType a) => SodaOrd a
+
+-- |For the different geometric SodaTypes.
+class (SodaType a) => SodaGeo a
+
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/checkbox.html SODA's Checkbox type>. It is the basic ternary type with Nothing as null.
 type Checkbox = Maybe Bool
 instance SodaType (Maybe Bool) where
@@ -115,14 +130,26 @@ newtype Money = Money { getMoney :: Double } deriving (Show, Eq)
 instance SodaType Money where
     toUrlPart m = show . getMoney $ m
 
+instance SodaNumeric Money
+instance SodaPseudoNumeric Money
+instance SodaOrd Money
+
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/double.html SODA's Double type>.
 instance SodaType Double where
     toUrlPart = show
+
+instance SodaNumeric Double
+instance SodaPseudoNumeric Double
+instance SodaOrd Double
 
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/double.html SODA's Number type>. Number is actually supposed to have arbitrary precision, and is a bit repetative as a double since we already have double, but I wasn't exactly sure how to implement it. We'll have to look around for true arbitrary precision Haskell types.
 newtype SodaNum = SodaNum { getSodaNum :: Double } deriving (Show, Eq)
 instance SodaType SodaNum where
     toUrlPart n = show $ getSodaNum n
+
+instance SodaNumeric SodaNum
+instance SodaPseudoNumeric SodaNum
+instance SodaOrd SodaNum
 
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/text.html SODA's Text type>. The difference in the name of the Haskell type and the SODA type is to prevent collisions and confusion with the more popular Haskell Text type.
 type SodaText = String
@@ -132,6 +159,8 @@ instance SodaType SodaText where
             aposFinder char accum = char : accum
         in "'" ++ foldr aposFinder "" t ++ "'"
 
+instance SodaOrd SodaText
+
 -- Cuts off instead of rounding because I have no idea of a good way to handle rounding things like 999.9 milliseconds. If anyone has any better idea of how to handle this, let me know. I suppose I could test and see if the API will handle greater precision, even if it doesn't use it.
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/floating_timestamp.html SODA's Floating Timestamp Type>. The names a bit different because floating timestamp seemed a bit long. The precision and rounding of this value need improvement.
 type Timestamp = UTCTime
@@ -139,6 +168,9 @@ instance SodaType Timestamp where
     toUrlPart t = (formatTime defaultTimeLocale tsFormat t) ++ "." ++ ms
         where tsFormat = iso8601DateFormat (Just "%T")
               ms = take 3 $ formatTime defaultTimeLocale "%q" t
+
+instance SodaPseudoNumeric Timestamp
+instance SodaOrd Timestamp
 
 -- I'm actually not completely sure of the precision required here.
 -- Perhaps rename to Position and then have point as a type synonym (since I think that is semantically more correct).

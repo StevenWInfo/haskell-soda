@@ -58,6 +58,9 @@ tests = testGroup "Soda Tests"
     , testCase "Testing full API call" $ do
         theResponse <- getSodaResponse testDomain testDataset $ emptyQuery { filters = Just [ (Column "magnitude" :: Column SodaNum) $= (SodaVal $ SodaNum 1.6) ], limit = Just 1 }
         (show theResponse) @?= "Foobar"
+    , testCase "Testing special characters." $ do
+        theResponse <- getSodaResponse testDomain testDataset $ emptyQuery { filters = Just [ (Column "region" :: Column SodaText) $= (SodaVal "a!@#$%^&*(),.;:\"'?+=-_[]{}~`<>\\| ") ], limit = Just 1 }
+        (show theResponse) @?= "Foobar"
     ]
     where
         testDomain  = "soda.demo.socrata.com"

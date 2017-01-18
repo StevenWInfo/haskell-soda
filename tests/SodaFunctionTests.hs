@@ -31,6 +31,8 @@ tests = testGroup "Soda Function Tests"
     -- Well, I appearantly shouldn't try and be clever with the point type, because you could put two number columns for latitude and longitude which my API would prevent.
     , testCase "Troublesome within_circle function." $
         (toUrlParam $ WithinCircle loc (sn 45.23) (sn 55.8) (sn 45.2)) @?= "within_circle(some_place, 45.23, 55.8, 45.2)"
+    , testCase "Testing addition with different numeric types." $
+        (toUrlParam $ (sn 5.1 $+ (sv $ Money 7.20) $+ dblCol)) @?= "5.1 + 7.2 + some_double"
     ]
     where sv :: (SodaType a) => a -> SodaVal a -- Note to self: GADTs are finicky
           sv     = SodaVal
