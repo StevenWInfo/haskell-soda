@@ -19,7 +19,7 @@ tests = testGroup "Datatype Tests"
     , testCase "Testing lower" $
         lower (SodaVal (Just True)) @?= Right (Just True)
     , testCase "Testing what money looks like" $
-        (toUrlParam . SodaVal . Money $ 19.99) @?= "19.99"
+        (toUrlParam . SodaVal . Money $ 19.99) @?= "'19.99'"
     , testCase "Testing basic SodaText toUrlParam" $
         (toUrlParam . SodaVal $ "Lorem ipsum") @?= "'Lorem ipsum'"
     , testCase "A SodaText with an apostrophe/single quote in it" $

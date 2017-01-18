@@ -43,7 +43,7 @@ import Datatypes
 -- Unfortunately declaring all of the typeclasses is pretty verbose, and some constructors have a lot of parameters, so the type declerations of the constructors can get pretty long. Also, there should be some extra constraints on some of them such as only having geometric types as input, but the typeclasses just haven't been made yet.
 data SodaFunc datatype where
     -- Need another type constraint on sodaType
-    Between                  :: (SodaOrd m, SodaOrd n, SodaOrd o, SodaType a) => m a -> n a -> o a -> SodaFunc Checkbox
+    Between                  :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaOrd a) => m a -> n a -> o a -> SodaFunc Checkbox
     Case                     :: (SodaType a) => [(Expr Checkbox, Expr a)] -> SodaFunc a
     -- Geo typeclass. I think that it has to be a column, but I'm not sure.
     -- Is this an aggregate or can you put any expression in the input?

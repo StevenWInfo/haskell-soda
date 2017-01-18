@@ -128,7 +128,7 @@ instance SodaType (Maybe Bool) where
 newtype Money = Money { getMoney :: Double } deriving (Show, Eq)
 -- I could at least maybe limit the precision when putting in URL even if I can't in the type itself yet.
 instance SodaType Money where
-    toUrlPart m = show . getMoney $ m
+    toUrlPart m = "'" ++ (show . getMoney $ m) ++ "'"
 
 instance SodaNumeric Money
 instance SodaPseudoNumeric Money
@@ -145,7 +145,7 @@ instance SodaOrd Double
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/double.html SODA's Number type>. Number is actually supposed to have arbitrary precision, and is a bit repetative as a double since we already have double, but I wasn't exactly sure how to implement it. We'll have to look around for true arbitrary precision Haskell types.
 newtype SodaNum = SodaNum { getSodaNum :: Double } deriving (Show, Eq)
 instance SodaType SodaNum where
-    toUrlPart n = show $ getSodaNum n
+    toUrlPart n = (show $ getSodaNum n)
 
 instance SodaNumeric SodaNum
 instance SodaPseudoNumeric SodaNum
