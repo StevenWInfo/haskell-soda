@@ -36,7 +36,7 @@ tests = testGroup "Soda Tests"
             Left ex -> do
                 False @? "Shouldn't have thrown exception."
             Right foo -> do
-                ((read (BS.unpack (fromJust $ responseHeader foo "X-Soda2-Types"))) :: [String]) @?= ["Something"]
+                ((read (BS.unpack (fromJust $ responseHeader foo "X-Soda2-Types"))) :: [String]) @?= ["number","text","point","text","text","text","text","number","number","text","text","text"]
     , testCase "Test 404 response" $ do
         response <- try (getLbsResponse (tail testDomain) testDataset testFormat testQuery) :: IO (Either HttpException LbsResponse)
         case response of
