@@ -117,6 +117,9 @@ class (SodaType a) => SodaOrd a
 -- |For the different geometric SodaTypes.
 class (SodaType a) => SodaGeo a
 
+-- |Just for the functions simplify and simplify_preserve_topology.
+class (SodaType a) => SodaSimplifyGeo a
+
 -- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/checkbox.html SODA's Checkbox type>. It is the basic ternary type with Nothing as null.
 type Checkbox = Maybe Bool
 instance SodaType (Maybe Bool) where
@@ -183,6 +186,8 @@ data Point = Point { longitude :: Double
 instance SodaType Point where
     toUrlPart point = "'POINT (" ++ (pointUPart point) ++ ")'"
 
+instance SodaGeo Point
+
 -- This has an alternate WKT format. Have to test it out.
 -- |The type that Corresponds with <https://dev.socrata.com/docs/datatypes/multipoint.html SODA's Multipoint type>.
 type MultiPoint = [Point]
@@ -203,8 +208,11 @@ data USAddress = USAddress { address :: String
 -- Since we're not exporting the constructor and it isn't ever used, then the type definition doesn't really matter.
 -- |Corresponds with <https://dev.socrata.com/docs/datatypes/location.html SODA's Location type>. According to the SODA documentation, location is a legacy datatype so it is discouraged from being used and some SODA functions available for the point datatype are not available for the location datatype. The constructor is not exported because there the library currently doesn't know how to represent them in the URL
 data Location = Location (Maybe Point) (Maybe USAddress) deriving (Show, Eq)
+
 instance SodaType Location where
     toUrlPart _ = ""
+
+instance SodaGeo Location
                    
 -- The only difference in the data structure of Line and Multipoint is that Line has to have at least two positions/points in them
 -- |Corresponds with <https://dev.socrata.com/docs/datatypes/line.html SODA's Line type>.
@@ -212,20 +220,32 @@ newtype Line = Line { getLinePoints :: [Point] } deriving (Show, Eq)
 instance SodaType Line where
     toUrlPart (Line points) = "'LINESTRING " ++ (pointsUPart points) ++ "'"
 
+instance SodaGeo Line
+instance SodaSimplifyGeo Line
+
 -- |Corresponds with <https://dev.socrata.com/docs/datatypes/multiline.html SODA's Multiline type>.
 type MultiLine = [Line]
 instance SodaType MultiLine where
     toUrlPart lines = "'MULTILINESTRING " ++ (linesUPart $ map getLinePoints lines) ++ "'"
+
+instance SodaGeo MultiLine
+instance SodaSimplifyGeo MultiLine
 
 -- |Corresponds with <https://dev.socrata.com/docs/datatypes/polygon.html SODA's Polygon type>.
 newtype Polygon = Polygon { getPolyPoints :: [[Point]] } deriving (Show, Eq)
 instance SodaType Polygon where
     toUrlPart (Polygon lines) = "'POLYGON " ++ (linesUPart lines) ++ "'"
 
+instance SodaGeo Polygon
+instance SodaSimplifyGeo Polygon
+
 -- |Corresponds with <https://dev.socrata.com/docs/datatypes/multipolygon.html SODA's Multipolygon type>.
 type MultiPolygon = [Polygon]
 instance SodaType MultiPolygon where
     toUrlPart polygons = "'MULTIPOLYGON (" ++ (intercalate ", " $ map (linesUPart . getPolyPoints) polygons) ++ ")'"
+
+instance SodaGeo MultiPolygon
+instance SodaSimplifyGeo MultiPolygon
 
 -- TODO Bad name. Improve.
 -- |Utility function
