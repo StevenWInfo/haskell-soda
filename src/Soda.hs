@@ -23,6 +23,7 @@ module Soda
     , Field
     , Row
     , Response
+    , ReturnValue (..)
     ) where
 
 import System.IO
