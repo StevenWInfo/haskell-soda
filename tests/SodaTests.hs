@@ -67,12 +67,11 @@ tests = testGroup "Soda Tests"
         theResponse @?= []
     , testCase "Testing a handful of SODA functions, operators, and values." $ do
         theResponse <- getSodaResponse testDomain testDataset $
-            emptyQuery { selects = Just $ [ Select source, Alias location "place", Alias (Upper location_state) "state" ]
+            emptyQuery { selects = Just $ [ Select source, Alias location "place", Alias (Lower region) "area" ]
                        , limit = Just 3
-                       , wheres = Just . Where $ number_of_stations $> sn 1.0 $&& IsNotNull location $&& IsNotNull location_state
+                       , wheres = Just . Where $ number_of_stations $> sn 1.0 $&& IsNotNull number_of_stations $&& IsNotNull location $&& IsNotNull source $&& IsNotNull region
                        }
-        theResponse @?= [[], [("source",RSodaText "ak")],[("source",RSodaText "ak")],[("source",RSodaText "ak")]]
-    ]
+        theResponse @?= [[("source",RSodaText "nn"),("place",RPoint (Point {longitude = -117.6778, latitude = 36.9447})),("area",RSodaText "northern california")],[("source",RSodaText "nn"),("place",RPoint (Point {longitude = -117.6903, latitude = 36.9417})),("area",RSodaText "central california")],[("source",RSodaText "pr"),("place",RPoint (Point {longitude = -64.0849, latitude = 19.7859})),("area",RSodaText "north of the virgin islands")]]]
     where
         testDomain  = "soda.demo.socrata.com"
         testDataset = "6yvf-kk3n"

@@ -44,13 +44,14 @@ tests = testGroup "Query Tests"
                          , bom     = Just False
                          }
         ) @?= "Num=5.0&$select=Num, avg(Baz) as average&$order=Num ASC&$group=Foo&$limit=3&$offset=5&$q=Hello, world&$$bom=false"
+    -- I suppose I should be 100% sure it will always return the same values, which will probably mean specifying primary key values. If this test breaks, then specify primary key values.
     , testCase "Testing a query I was getting strange results for" $
         (queryToString $
             emptyQuery { selects = Just $ [ Select source, Alias location "place", Alias (Upper location_state) "state" ]
                        , limit = Just 3
-                       , wheres = Just . Where $ number_of_stations $> sn 1.0
+                       , wheres = Just . Where $ number_of_stations $> sn 1.0 $&& IsNotNull location $&& IsNotNull location_state
                        }
-        ) @?= "$select=source, location as place, upper(location_state) as state&$where=number_of_stations > 1.0&$limit=3"
+        ) @?= "$select=source, location as place, upper(location_state) as state&$where=number_of_stations > 1.0 AND location IS NOT NULL AND location_state IS NOT NULL&$limit=3"
     -- Might want to move these tests to another file.
     , testCase "Testing getting values out of responses" $
         getVal ((Expr $ SodaVal "Foobar") :: Expr String) @?= Right "Foobar"

@@ -90,8 +90,8 @@ instance SodaExpr SodaFunc where
     toUrlParam (Extent points)                                  = "extent(" ++ (toUrlParam points) ++ ")"
     toUrlParam (In element values)                              = (toUrlParam element) ++ " IN(" ++ (intercalate ", " (map exprUrlParam values)) ++ ")"
     toUrlParam (Intersects shapeA shapeB)                       = "intersects(" ++ (toUrlParam shapeA) ++ ", " ++ (toUrlParam shapeB) ++ ")"
-    toUrlParam (IsNotNull a)                                    = toUrlParam a ++ "IS NOT NULL "
-    toUrlParam (IsNull a)                                       = toUrlParam a ++ "IS NULL " 
+    toUrlParam (IsNotNull a)                                    = toUrlParam a ++ " IS NOT NULL"
+    toUrlParam (IsNull a)                                       = toUrlParam a ++ " IS NULL" 
     toUrlParam (Like textA textB)                               = (toUrlParam textA) ++ " like " ++ (toUrlParam textB)
     toUrlParam (Lower text)                                     = "lower(" ++ (toUrlParam text) ++ ")"
     toUrlParam (Not a)                                          = "NOT " ++ toUrlParam a
