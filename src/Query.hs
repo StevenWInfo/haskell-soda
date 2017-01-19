@@ -18,6 +18,7 @@ module Query
     , Filter (Filter)
     , ($=)
     , Select (..)
+    , Where (Where)
     , Sorting (ASC, DESC)
     , Order (Order)
     , GroupElem (Groupify)
@@ -143,9 +144,10 @@ queryToString query = intercalate "&" $ map stringify (queryToParam query)
 -- Should possibly be hidden after being imported into Soda.hs.
 -- |Creates the list of pairs of parameters and values that go into the URL.
 queryToParam :: Query -> [(String, String)]
-queryToParam query = filters' ++ selects' ++ orders' ++ groups' ++ limit' ++ offset' ++ search' ++ bom'
+queryToParam query = filters' ++ selects' ++ wheres' ++ orders' ++ groups' ++ limit' ++ offset' ++ search' ++ bom'
     where filters' = ifExists filtersToParam $ filters query
           selects' = ifExists selectsToParam $ selects query
+          wheres'  = ifExists wheresToParam  $ wheres  query
           groups'  = ifExists groupsToParam  $ groups  query
           orders'  = ifExists ordersToParam  $ orders  query
           limit'   = ifExists limitToParam   $ limit   query
@@ -168,6 +170,9 @@ selectsToParam :: [Select] -> [(String, String)]
 selectsToParam selects' = [("$select", intercalate ", " $ map selectToParam selects')]
     where selectToParam (Select col) = toUrlParam col
           selectToParam (Alias col alias) = (toUrlParam col) ++ " as " ++ alias
+
+wheresToParam :: Where -> [(String, String)]
+wheresToParam (Where clause) = [("$where", toUrlParam clause)]
 
 ordersToParam :: [Order] -> [(String, String)]
 ordersToParam orders' = [("$order", intercalate ", " $ map orderToParam orders')]
