@@ -65,6 +65,13 @@ tests = testGroup "Soda Tests"
     , testCase "Testing special characters. (Any value is fine)" $ do
         theResponse <- getSodaResponse testDomain testDataset $ emptyQuery { filters = Just [ (Column "region" :: Column SodaText) $= (SodaVal "a!@#$%^&*(),.;:\"'?+=-_[]{}~`<>\\| ") ], limit = Just 1 }
         theResponse @?= []
+    , testCase "Testing a handful of SODA functions, operators, and values." $ do
+        theResponse <- getSodaResponse testDomain testDataset $
+            emptyQuery { selects = Just $ [ Select source, Alias location "place", Alias (Upper location_state) "state" ]
+                       , limit = Just 3
+                       , wheres = Just . Where $ number_of_stations $> sn 1.0 $&& IsNotNull location $&& IsNotNull location_state
+                       }
+        theResponse @?= [[], [("source",RSodaText "ak")],[("source",RSodaText "ak")],[("source",RSodaText "ak")]]
     ]
     where
         testDomain  = "soda.demo.socrata.com"
@@ -75,3 +82,17 @@ tests = testGroup "Soda Tests"
         selectNotFound :: HttpException -> Maybe Status.Status
         selectNotFound (VanillaHttpException (Http.HttpExceptionRequest _ (Http.StatusCodeException (rec) _))) = Just (Http.responseStatus rec)
         selectNotFound _ = Nothing
+        sn = SodaVal . SodaNum
+
+source             = Column "source"             :: Column SodaText
+earthquake_id      = Column "source"             :: Column SodaText
+version            = Column "source"             :: Column SodaText
+magnitude          = Column "magnitude"          :: Column SodaNum
+depth              = Column "depth"              :: Column SodaNum
+number_of_stations = Column "number_of_stations" :: Column SodaNum
+region             = Column "region"             :: Column SodaText
+location_city      = Column "location_city"      :: Column SodaText
+location           = Column "location"           :: Column Point
+location_address   = Column "location_address"   :: Column SodaText
+location_zip       = Column "location_zip"       :: Column SodaText
+location_state     = Column "location_state"     :: Column SodaText

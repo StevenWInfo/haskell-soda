@@ -42,7 +42,6 @@ import Datatypes
 --
 -- Unfortunately declaring all of the typeclasses is pretty verbose, and some constructors have a lot of parameters, so the type declerations of the constructors can get pretty long. Also, there should be some extra constraints on some of them such as only having geometric types as input, but the typeclasses just haven't been made yet.
 data SodaFunc datatype where
-    -- Need another type constraint on sodaType
     Between                  :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaOrd a) => m a -> n a -> o a -> SodaFunc Checkbox
     -- This is unfortunately more constrained than it should be (I think). I'm pretty sure the case results can have different types.
     Case                     :: (SodaType a) => [(Expr Checkbox, Expr a)] -> SodaFunc a
@@ -91,8 +90,8 @@ instance SodaExpr SodaFunc where
     toUrlParam (Extent points)                                  = "extent(" ++ (toUrlParam points) ++ ")"
     toUrlParam (In element values)                              = (toUrlParam element) ++ " IN(" ++ (intercalate ", " (map exprUrlParam values)) ++ ")"
     toUrlParam (Intersects shapeA shapeB)                       = "intersects(" ++ (toUrlParam shapeA) ++ ", " ++ (toUrlParam shapeB) ++ ")"
-    toUrlParam (IsNotNull a)                                    = "IS NOT NULL " ++ toUrlParam a
-    toUrlParam (IsNull a)                                       = "IS NULL " ++ toUrlParam a
+    toUrlParam (IsNotNull a)                                    = toUrlParam a ++ "IS NOT NULL "
+    toUrlParam (IsNull a)                                       = toUrlParam a ++ "IS NULL " 
     toUrlParam (Like textA textB)                               = (toUrlParam textA) ++ " like " ++ (toUrlParam textB)
     toUrlParam (Lower text)                                     = "lower(" ++ (toUrlParam text) ++ ")"
     toUrlParam (Not a)                                          = "NOT " ++ toUrlParam a

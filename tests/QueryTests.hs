@@ -44,6 +44,13 @@ tests = testGroup "Query Tests"
                          , bom     = Just False
                          }
         ) @?= "Num=5.0&$select=Num, avg(Baz) as average&$order=Num ASC&$group=Foo&$limit=3&$offset=5&$q=Hello, world&$$bom=false"
+    , testCase "Testing a query I was getting strange results for" $
+        (queryToString $
+            emptyQuery { selects = Just $ [ Select source, Alias location "place", Alias (Upper location_state) "state" ]
+                       , limit = Just 3
+                       , wheres = Just . Where $ number_of_stations $> sn 1.0
+                       }
+        ) @?= "$select=source, location as place, upper(location_state) as state&$where=number_of_stations > 1.0&$limit=3"
     -- Might want to move these tests to another file.
     , testCase "Testing getting values out of responses" $
         getVal ((Expr $ SodaVal "Foobar") :: Expr String) @?= Right "Foobar"
@@ -53,3 +60,17 @@ tests = testGroup "Query Tests"
     where colFoo = Column "Foo" :: Column SodaText
           numCol = Column "Num" :: Column SodaNum
           avgCol = Avg ((Column "Baz") :: Column SodaNum)
+          sn = SodaVal . SodaNum
+
+source             = Column "source"             :: Column SodaText
+earthquake_id      = Column "source"             :: Column SodaText
+version            = Column "source"             :: Column SodaText
+magnitude          = Column "magnitude"          :: Column SodaNum
+depth              = Column "depth"              :: Column SodaNum
+number_of_stations = Column "number_of_stations" :: Column SodaNum
+region             = Column "region"             :: Column SodaText
+location_city      = Column "location_city"      :: Column SodaText
+location           = Column "location"           :: Column Point
+location_address   = Column "location_address"   :: Column SodaText
+location_zip       = Column "location_zip"       :: Column SodaText
+location_state     = Column "location_state"     :: Column SodaText
