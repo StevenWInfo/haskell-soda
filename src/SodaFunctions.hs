@@ -47,16 +47,16 @@ data SodaFunc datatype where
     Case                     :: (SodaType a) => [(Expr Checkbox, Expr a)] -> SodaFunc a
     -- Geo typeclass. I think that it has to be a column, but I'm not sure.
     -- Is this an aggregate or can you put any expression in the input?
-    ConvexHull               :: (SodaType geo) => Column geo -> SodaFunc MultiPolygon
+    ConvexHull               :: (SodaGeo geo) => Column geo -> SodaFunc MultiPolygon
     DateTruncY               :: (SodaExpr m) => m Timestamp -> SodaFunc Timestamp
     DateTruncYM              :: (SodaExpr m) => m Timestamp -> SodaFunc Timestamp
     DateTruncYMD             :: (SodaExpr m) => m Timestamp -> SodaFunc Timestamp
     Distance                 :: (SodaExpr m, SodaExpr n) => m Point -> n Point -> SodaFunc SodaNum
     -- Takes an agg (can't use in where)
-    Extent                   :: (SodaExpr m, SodaType geo) => m geo -> SodaFunc MultiPolygon
+    Extent                   :: (SodaExpr m, SodaGeo geo) => m geo -> SodaFunc MultiPolygon
     -- Input needs to be constrained. This is going to need to be fixed because the list has to all be the same type which is problematic. Maybe if I made all of the different expressions as one type instead? Or maybe I say that you can't put in columns and make a SodaFunc for values?
     In                       :: (SodaExpr m, SodaType a) => m a -> [Expr a] -> SodaFunc Checkbox
-    Intersects               :: (SodaExpr m, SodaExpr n, SodaType a, SodaType b) => m a -> n b -> SodaFunc Checkbox
+    Intersects               :: (SodaExpr m, SodaExpr n, SodaGeo a, SodaGeo b) => m a -> n b -> SodaFunc Checkbox
     IsNotNull                :: (SodaExpr m, SodaType a) => m a -> SodaFunc Checkbox
     IsNull                   :: (SodaExpr m, SodaType a) => m a -> SodaFunc Checkbox
     Like                     :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaFunc Checkbox
@@ -67,11 +67,11 @@ data SodaFunc datatype where
     NotIn                    :: (SodaExpr m, SodaType a, SodaType b) => m a -> [Expr b] -> SodaFunc Checkbox
     NotLike                  :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaFunc Checkbox
     -- Geo constraint
-    NumPoints                :: (SodaExpr m, SodaType geo) => m geo -> SodaFunc SodaNum
+    NumPoints                :: (SodaExpr m, SodaGeo geo) => m geo -> SodaFunc SodaNum
     -- Alternative geo constraint. Need to test this.
-    Simplify                 :: (SodaExpr m, SodaExpr n, SodaType geoAlt) => m geoAlt -> n SodaNum -> SodaFunc geoAlt
+    Simplify                 :: (SodaExpr m, SodaExpr n, SodaSimplifyGeo geoAlt) => m geoAlt -> n SodaNum -> SodaFunc geoAlt
     -- Alternative geo constraint. Need to test this. Better name?
-    SimplifyPreserveTopology :: (SodaExpr m, SodaExpr n, SodaType geoAlt) => m geoAlt -> n SodaNum -> SodaFunc geoAlt
+    SimplifyPreserveTopology :: (SodaExpr m, SodaExpr n, SodaSimplifyGeo geoAlt) => m geoAlt -> n SodaNum -> SodaFunc geoAlt
     StartsWith               :: (SodaExpr m, SodaExpr n) => m SodaText -> n SodaText -> SodaFunc Checkbox
     -- Num constraint. First parameter might be Agg instead of Column
     -- Is this really an aggregate or can you actually put any expression in the input?
@@ -80,11 +80,11 @@ data SodaFunc datatype where
     StdDevSamp               :: (SodaType num) => Column num -> SodaFunc SodaNum
     Upper                    :: (SodaExpr m) => m SodaText -> SodaFunc SodaText
     -- Geo constraint that includes location
-    WithinBox                :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaExpr q, SodaType geo) => m geo -> n SodaNum -> o SodaNum -> p SodaNum -> q SodaNum -> SodaFunc Checkbox
+    WithinBox                :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaExpr q, SodaGeo geo) => m geo -> n SodaNum -> o SodaNum -> p SodaNum -> q SodaNum -> SodaFunc Checkbox
     -- Geo constraint that includes location
-    WithinCircle             :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaType geo) => m geo -> n SodaNum -> o SodaNum -> p SodaNum -> SodaFunc Checkbox
+    WithinCircle             :: (SodaExpr m, SodaExpr n, SodaExpr o, SodaExpr p, SodaGeo geo) => m geo -> n SodaNum -> o SodaNum -> p SodaNum -> SodaFunc Checkbox
     -- Geo constraint that doesn't include location.
-    WithinPolygon            :: (SodaExpr m, SodaExpr n, SodaType geo) => m geo -> n MultiPolygon -> SodaFunc Checkbox
+    WithinPolygon            :: (SodaExpr m, SodaExpr n, SodaGeo geo) => m geo -> n MultiPolygon -> SodaFunc Checkbox
 
 -- This needs to be fixed for certain types. It's not always the same as putting the toUrlParam of their parts in the right place.
 instance SodaExpr SodaFunc where

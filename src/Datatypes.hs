@@ -28,6 +28,8 @@ module Datatypes
     , SodaNumeric
     , SodaPseudoNumeric
     , SodaOrd
+    , SodaGeo
+    , SodaSimplifyGeo
     -- * Haskell types corresponding to SODA Types
     , Checkbox
     , Money (..)
