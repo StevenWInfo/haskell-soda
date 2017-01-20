@@ -22,6 +22,7 @@ module Query
     , Sorting (ASC, DESC)
     , Order (Order)
     , Group (Group)
+    , Having (Having)
     , Query (..)
     , emptyQuery
     , queryToString
@@ -143,11 +144,12 @@ queryToString query = intercalate "&" $ map stringify (queryToParam query)
 -- Should possibly be hidden after being imported into Soda.hs.
 -- |Creates the list of pairs of parameters and values that go into the URL.
 queryToParam :: Query -> [(String, String)]
-queryToParam query = filters' ++ selects' ++ wheres' ++ orders' ++ groups' ++ limit' ++ offset' ++ search' ++ bom'
+queryToParam query = filters' ++ selects' ++ wheres' ++ orders' ++ groups' ++ having'++ limit' ++ offset' ++ search' ++ bom'
     where filters' = ifExists filtersToParam $ filters query
           selects' = ifExists selectsToParam $ selects query
           wheres'  = ifExists wheresToParam  $ wheres  query
           groups'  = ifExists groupsToParam  $ groups  query
+          having'  = ifExists havingToParam  $ having  query
           orders'  = ifExists ordersToParam  $ orders  query
           limit'   = ifExists limitToParam   $ limit   query
           offset'  = ifExists offsetToParam  $ offset  query
@@ -182,6 +184,9 @@ ordersToParam orders' = [("$order", intercalate ", " $ map orderToParam orders')
 groupsToParam :: [Group] -> [(String, String)]
 groupsToParam groups' = [("$group", intercalate ", " $ map groupToParam groups')]
     where groupToParam (Group col) = toUrlParam col
+
+havingToParam :: Having -> [(String, String)]
+havingToParam (Having clause) = [("$having", toUrlParam clause)]
 
 limitToParam :: NonNegative -> [(String, String)]
 limitToParam limit' = [("$limit", show limit')]
