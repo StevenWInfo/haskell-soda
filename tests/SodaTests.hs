@@ -64,6 +64,12 @@ tests = testGroup "Soda Tests"
     , testCase "Testing special characters. (Any value is fine)" $ do
         theResponse <- getSodaResponse testDomain testDataset $ emptyQuery { filters = Just [ (Column "region" :: Column SodaText) $= (SodaVal "a!@#$%^&*(),.;:\"'?+=-_[]{}~`<>\\| ") ], limit = Just 1 }
         theResponse @?= []
+    , testCase "Testing the query on the SODA doc home page" $ do
+        theResponse <- getSodaResponse "data.ct.gov" "y6p2-px98" $
+            emptyQuery { filters = Just [ (Column "category" :: Column SodaText) $= SodaVal "Fruit", (Column "item" :: Column SodaText) $= SodaVal "Peaches"]
+                       , limit = Just 3
+                       }
+        theResponse @?= [[("zipcode",RSodaText "06791"),("location_1_state",RSodaText "CT"),("location_1_location",RSodaText "16 Bogue Rd"),("location_1_city",RSodaText "Harwinton"),("location_1",RPoint (Point {longitude = -73.09627264999966, latitude = 41.77989387000048})),("l",RSodaNum (SodaNum {getSodaNum = 0.0})),("item",RSodaText "Peaches"),("farmer_id",RSodaNum (SodaNum {getSodaNum = 3402.0})),("category",RSodaText "Fruit"),("business",RSodaText "Francis Motuzick Jr")],[("zipcode",RSodaText "06759"),("phone1",RSodaText "860-361-6216"),("location_1_state",RSodaText "CT"),("location_1_location",RSodaText "403 Beach Street"),("location_1_city",RSodaText "Litchfield"),("location_1",RPoint (Point {longitude = -73.22418539499967, latitude = 41.7874849100005})),("l",RSodaNum (SodaNum {getSodaNum = 18.0})),("item",RSodaText "Peaches"),("farmer_id",RSodaNum (SodaNum {getSodaNum = 16352.0})),("farm_name",RSodaText "Morning Song Farms"),("category",RSodaText "Fruit"),("business",RSodaText "Morning Song Farms")],[("zipcode",RSodaText "06477"),("phone1",RSodaText "203-795-0571"),("location_1_state",RSodaText "CT"),("location_1_location",RSodaText "707 Derby Turnpike"),("location_1_city",RSodaText "Orange"),("location_1",RPoint (Point {longitude = -73.04627981099964, latitude = 41.31108858500045})),("l",RSodaNum (SodaNum {getSodaNum = 15.0})),("item",RSodaText "Peaches"),("farmer_id",RSodaNum (SodaNum {getSodaNum = 6640.0})),("farm_name",RSodaText "Field View Farm"),("category",RSodaText "Fruit"),("business",RSodaText "Field View Farm")]]
     , testCase "Testing a handful of SODA functions, operators, and values." $ do
         theResponse <- getSodaResponse testDomain testDataset $
             emptyQuery { selects = Just [ Select source, Alias location "place", Alias (Lower region) "area" ]
