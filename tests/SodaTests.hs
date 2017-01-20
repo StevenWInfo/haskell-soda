@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 
 module SodaTests
     ( tests
@@ -38,7 +37,7 @@ tests = testGroup "Soda Tests"
             Left ex -> do
                 False @? "Shouldn't have thrown exception"
             Right foo -> do
-                ((read (BS.unpack (fromJust $ responseHeader foo "X-Soda2-Types"))) :: [String]) @?= ["number","text","point","text","text","text","text","number","number","text","text","text"]
+                ((read (BS.unpack (fromJust $ responseHeader foo (BS.pack "X-Soda2-Types")))) :: [String]) @?= ["number","text","point","text","text","text","text","number","number","text","text","text"]
     , testCase "Test 404 response" $ do
         response <- try (getLbsResponse (tail testDomain) testDataset testFormat testQuery) :: IO (Either HttpException LbsResponse)
         case response of
@@ -67,11 +66,31 @@ tests = testGroup "Soda Tests"
         theResponse @?= []
     , testCase "Testing a handful of SODA functions, operators, and values." $ do
         theResponse <- getSodaResponse testDomain testDataset $
-            emptyQuery { selects = Just $ [ Select source, Alias location "place", Alias (Lower region) "area" ]
+            emptyQuery { selects = Just [ Select source, Alias location "place", Alias (Lower region) "area" ]
                        , limit = Just 3
                        , wheres = Just . Where $ number_of_stations $> sn 1.0 $&& IsNotNull number_of_stations $&& IsNotNull location $&& IsNotNull source $&& IsNotNull region
                        }
-        theResponse @?= [[("source",RSodaText "nn"),("place",RPoint (Point {longitude = -117.6778, latitude = 36.9447})),("area",RSodaText "northern california")],[("source",RSodaText "nn"),("place",RPoint (Point {longitude = -117.6903, latitude = 36.9417})),("area",RSodaText "central california")],[("source",RSodaText "pr"),("place",RPoint (Point {longitude = -64.0849, latitude = 19.7859})),("area",RSodaText "north of the virgin islands")]]]
+        theResponse @?= [[("source",RSodaText "nn"),("place",RPoint (Point {longitude = -117.6778, latitude = 36.9447})),("area",RSodaText "northern california")],[("source",RSodaText "nn"),("place",RPoint (Point {longitude = -117.6903, latitude = 36.9417})),("area",RSodaText "central california")],[("source",RSodaText "pr"),("place",RPoint (Point {longitude = -64.0849, latitude = 19.7859})),("area",RSodaText "north of the virgin islands")]]
+    -- I suppose I'm not really testing individual units in some of these "unit" tests.
+    , testCase "Testing other SODA functions, operators, and values." $ do
+        theResponse <- getSodaResponse testDomain testDataset $
+            emptyQuery { selects = Just [ Alias (Case [(Expr $ sodaM True $&& sodaM False, sodaE "foo"), (Expr $ number_of_stations $> (sn 15.0 $- sn 5.0), sodaE "bar"), (Expr $ depth $== sn 0.0, sodaE "baz")]) "case_result" ]
+                       , limit = Just 3
+                       , wheres = Just . Where $
+                            IsNotNull depth
+                            $&& IsNotNull number_of_stations 
+                             $&& WithinCircle location (sn 63) (sn (-147.0)) (sn 60000)
+                       }
+        theResponse @?= [[("case_result",RSodaText "bar")],[("case_result",RSodaText "bar")],[("case_result",RSodaText "bar")]]
+    , testCase "Testing out aggregate related functionality SODA functions, operators, and values." $ do
+        theResponse <- getSodaResponse testDomain testDataset $
+            emptyQuery { selects = Just [ Alias (Avg magnitude) "avg_mag" ]
+                       , limit = Just 3
+                       , groups = Just [Group magnitude]
+                       , having = Just . Having $ ((Column "avg_mag") :: Column SodaNum) $> sn 1.0-- Points out that aliases need to be improved.
+                       }
+        theResponse @?= [[("avg_mag",RSodaNum (SodaNum {getSodaNum = 1.01}))],[("avg_mag",RSodaNum (SodaNum {getSodaNum = 1.02}))],[("avg_mag",RSodaNum (SodaNum {getSodaNum = 1.03}))]]
+    ]
     where
         testDomain  = "soda.demo.socrata.com"
         testDataset = "6yvf-kk3n"
@@ -82,6 +101,8 @@ tests = testGroup "Soda Tests"
         selectNotFound (VanillaHttpException (Http.HttpExceptionRequest _ (Http.StatusCodeException (rec) _))) = Just (Http.responseStatus rec)
         selectNotFound _ = Nothing
         sn = SodaVal . SodaNum
+        sodaE = Expr . SodaVal
+        sodaM = SodaVal . Just
 
 source             = Column "source"             :: Column SodaText
 earthquake_id      = Column "source"             :: Column SodaText

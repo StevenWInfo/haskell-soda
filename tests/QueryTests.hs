@@ -21,7 +21,7 @@ tests = testGroup "Query Tests"
     , testCase "Testing select parameter building" $
         (queryToString $ emptyQuery { selects = Just [ Select colFoo, Alias numCol "NumAlias" ]}) @?= "$select=Foo, Num as NumAlias"
     , testCase "Testing group parameter building" $
-        (queryToString $ emptyQuery { groups = Just [ Groupify colFoo, Groupify numCol ]}) @?= "$group=Foo, Num"
+        (queryToString $ emptyQuery { groups = Just [ Group colFoo, Group numCol ]}) @?= "$group=Foo, Num"
     , testCase "Testing order parameter building" $
         (queryToString $ emptyQuery { orders = Just [ Order colFoo ASC, Order numCol DESC ]}) @?= "$order=Foo ASC, Num DESC"
     , testCase "Testing limit parameter building" $
@@ -36,7 +36,7 @@ tests = testGroup "Query Tests"
         (queryToString 
             $ emptyQuery { filters = Just [ numCol $= (SodaVal (SodaNum 5.0))]
                          , selects = Just [ Select numCol, Alias avgCol "average"]
-                         , groups  = Just [ Groupify colFoo ]
+                         , groups  = Just [ Group colFoo ]
                          , orders  = Just [ Order numCol ASC ]
                          , offset  = Just 5
                          , limit   = Just 3
@@ -52,6 +52,16 @@ tests = testGroup "Query Tests"
                        , wheres = Just . Where $ number_of_stations $> sn 1.0 $&& IsNotNull location $&& IsNotNull location_state
                        }
         ) @?= "$select=source, location as place, upper(location_state) as state&$where=number_of_stations > 1.0 AND location IS NOT NULL AND location_state IS NOT NULL&$limit=3"
+    , testCase "Testing another query I was getting strange results for" $
+        (queryToString $
+            emptyQuery { selects = Just [ Alias (Case [(Expr $ sodaM True $&& sodaM True, sodaE "foo"), (Expr $ number_of_stations $> (sn 15.0 $- sn 5.0), sodaE "bar"), (Expr $ depth $== sn 0.0, sodaE "baz")]) "case_result" ]
+                       , limit = Just 3
+                       , wheres = Just . Where $
+                            IsNotNull depth
+                            $&& IsNotNull number_of_stations 
+                            $&& WithinCircle location (sn (-147.0)) (sn 63) (sn 100)
+                       }
+        ) @?= "$select=case(true AND true, 'foo', number_of_stations > 15.0 - 5.0, 'bar', depth = 0.0, 'baz') as case_result&$where=depth IS NOT NULL AND number_of_stations IS NOT NULL AND within_circle(location, -147.0, 63.0, 100.0)&$limit=3"
     -- Might want to move these tests to another file.
     , testCase "Testing getting values out of responses" $
         getVal ((Expr $ SodaVal "Foobar") :: Expr String) @?= Right "Foobar"
@@ -61,7 +71,9 @@ tests = testGroup "Query Tests"
     where colFoo = Column "Foo" :: Column SodaText
           numCol = Column "Num" :: Column SodaNum
           avgCol = Avg ((Column "Baz") :: Column SodaNum)
-          sn = SodaVal . SodaNum
+          sn     = SodaVal . SodaNum
+          sodaE  = Expr . SodaVal
+          sodaM  = SodaVal . Just
 
 source             = Column "source"             :: Column SodaText
 earthquake_id      = Column "source"             :: Column SodaText
