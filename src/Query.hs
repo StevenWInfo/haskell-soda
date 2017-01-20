@@ -21,7 +21,7 @@ module Query
     , Where (Where)
     , Sorting (ASC, DESC)
     , Order (Order)
-    , GroupElem (Groupify)
+    , Group (Group)
     , Query (..)
     , emptyQuery
     , queryToString
@@ -85,10 +85,9 @@ data Having where
     Having :: (SodaExpr m) => m Checkbox -> Having
 
 -- Possibly confusion with the mathematical concept of a group
--- Also, for some reason, this is completely inconsistant with the other query parts.
 -- |The type of the $group query part.
-data GroupElem where
-    Groupify :: SodaType sodatype => Column sodatype -> GroupElem
+data Group where
+    Group :: SodaType sodatype => Column sodatype -> Group
 
 {-
 limit :: Int -> Maybe Query
@@ -110,7 +109,7 @@ data Query = Query { selects  :: Maybe [Select]
                      , filters  :: Maybe [Filter] -- Type with columns and contents
                      , wheres   :: Maybe Where -- Is the lowercase where allowed?
                      , orders   :: Maybe [Order]
-                     , groups   :: Maybe [GroupElem] -- Depends on the select clause. Also, might need an existential type.
+                     , groups   :: Maybe [Group] -- Depends on the select clause. Also, might need an existential type.
                      , having   :: Maybe Having -- Depends on the group clause. Similar to where clause.
                      , limit    :: Maybe NonNegative
                      , offset   :: Maybe NonNegative
@@ -180,9 +179,9 @@ ordersToParam orders' = [("$order", intercalate ", " $ map orderToParam orders')
           sortParam ASC  = "ASC"
           sortParam DESC = "DESC"
 
-groupsToParam :: [GroupElem] -> [(String, String)]
+groupsToParam :: [Group] -> [(String, String)]
 groupsToParam groups' = [("$group", intercalate ", " $ map groupToParam groups')]
-    where groupToParam (Groupify col) = toUrlParam col
+    where groupToParam (Group col) = toUrlParam col
 
 limitToParam :: NonNegative -> [(String, String)]
 limitToParam limit' = [("$limit", show limit')]
