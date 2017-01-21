@@ -56,25 +56,97 @@ For those who are aware of what generalized algebraic data types (GADTs) are, th
 
 (Explain the response type as well).
 
+###Reference
+
+Once I make the Haddock documentation viewable, I'll probably replace this section and have it point to that.
+
+####SODA datatypes
+
+All of these types are part of the SodaType typeclass. Some are also grouped into subtypeclasses to put additional constraints on some of the SODA functions. You can view the details of how the types are grouped in Datatype.hs.
+
+<dl>
+    <dt>`Money`<dt>
+    <dd>
+        The type that corresponds with [SODA's Money type](https://dev.socrata.com/docs/datatypes/money.html). The precision beyond the hundreths place doesn't make sense for how most currencies, including the U.S. dollar, is represented, but this datatype can represent any currency whose representation's precision is not necessarily restricted to the hundreths place.
+    </dd>
+
+    <dt>`Double`<dt>
+    <dd>
+        The type that corresponds with [SODA's Double type](https://dev.socrata.com/docs/datatypes/double.html). It's just a Haskell Double type.
+    </dd>
+
+    <dt>`Number`<dt>
+    <dd>
+        The type that corresponds with [SODA's Number type](https://dev.socrata.com/docs/datatypes/double.html). It's also currently just a newtype around Double. Number is actually supposed to have arbitrary precision, and is a bit repetative as a double since we already have double, but I wasn't exactly sure how to implement it. We'll have to look around for true arbitrary precision Haskell types.
+    </dd>
+
+    <dt>`SodaText`<dt>
+    <dd>
+        The type that corresponds with [SODA's Text type](https://dev.socrata.com/docs/datatypes/text.html). The difference in the name of the Haskell type and the SODA type is to prevent collisions and confusion with the popular Haskell Text type.
+    </dd>
+
+    <dt>`Double`<dt>
+    <dd>
+        The type that corresponds with [SODA's Floating Timestamp Type](https://dev.socrata.com/docs/datatypes/floating_timestamp.html). The name is a bit different because floating timestamp seemed a bit long. The precision and rounding of this type need improvement.
+    </dd>
+
+    <dt>`Point`<dt>
+    <dd>
+        The type that corresponds with [SODA's Point Type](https://dev.socrata.com/docs/datatypes/point.html). I didn't make it a simple tuple because the order of the longitude and latitude differ a bit in places. Also, this is a bit more descriptive.
+    </dd>
+
+    <dt>`MultiPoint`<dt>
+    <dd>
+        The type that Corresponds with [SODA's Multipoint type](https://dev.socrata.com/docs/datatypes/multipoint.html). It's just a Haskell list of `Point`s
+    </dd>
+
+    <dt>`Location`<dt>
+    <dd>
+        Corresponds with [SODA's Location type](https://dev.socrata.com/docs/datatypes/location.html). According to the SODA documentation, location is a legacy datatype so it is discouraged from being used and some SODA functions available for the point datatype are not available for the location datatype. The constructor is not exported because there the library currently doesn't know how to represent them in the URL. Unless somebody really needs this type, I don't plan on working on it very much.
+    </dd>
+                   
+    <dt>`Line`<dt>
+    <dd>
+        Corresponds with [SODA's Line type](https://dev.socrata.com/docs/datatypes/line.html). It's just a newtype around a list of `Point`s
+    </dd>
+
+    <dt>`MultiLine`<dt>
+    <dd>
+        Corresponds with [SODA's Multiline type](https://dev.socrata.com/docs/datatypes/multiline.html). Just a Haskell list of `Line` types.
+    </dd>
+
+    <dt>`Polygon`<dt>
+    <dd>
+        Corresponds with [SODA's Polygon type](https://dev.socrata.com/docs/datatypes/polygon.html). It's defined as a newtype around a list of list of `Point`s.
+    </dd>
+
+    <dt>`MultiPolygon`<dt>
+    <dd>
+        Corresponds with [SODA's Multipolygon type](https://dev.socrata.com/docs/datatypes/multipolygon.html). It's defined as a list of `Polygon`s
+    </dd>
+</dl>
+
+###Soda Functions
+
 ##Tips
 
-Since it's somewhat annoying to put type declerations for `Column` values inline, I recommend defining constants for all of the columns that you are going to use in one batch, and then just use those throughout your code.
+- Since it's somewhat annoying to put type declerations for `Column` values inline, I recommend defining constants for all of the columns that you are going to use in one batch, and then just use those throughout your code.
 
-To reduce some of the boilerplate, I recommend making a lot of small functions that combine some of the constructors and other necessary parts. I didn't add these to the library because there could potentially be a lot of them, and it would have been a lot of memorizing to make a lot of them useful, but if you quickly create them one by one, they are simple enough to make when they are needed.
+- To reduce some of the boilerplate, I recommend making a lot of small functions that combine some of the constructors and other necessary parts. I didn't add these to the library because there could potentially be a lot of them, and it would have been a lot of memorizing to make a lot of them useful, but if you quickly create them one by one, they are simple enough to make when they are needed.
 
-If you can I actually recommend you *don't* use OverloadedStrings in the same file as queries are being built because sometimes the compiler gets confused with strings and this library.
+- If you can I actually recommend you *don't* use OverloadedStrings in the same file as queries are being built because sometimes the compiler gets confused with strings and this library.
 
 (Some type creation can get kind of long so you can make helper functions to make things shorter. For example, one for points, but then you have to be consistant with longitude and latitude). (Also, if there's anything that is more verbose than you would like, you can usually make it shorter with your own helper functions.)
 
 ###Common mistakes
 
-- Don't forget to put SodaVal on all values.
+- Don't forget to put `SodaVal` on all values in a query.
 
-- Don't forget to put Money and SodaNum on their respective types.
+- Don't forget to put `Money` and `SodaNum` on their respective types.
 
-- Don't forget to use Expr on things that need expression type hidden.
+- Don't forget to use `Expr` on things that need expression type hidden.
 
-- Don't forget to put Just on Maybe values like Query fields and Checkbox.
+- Don't forget to put `Just` on Maybe values like `Query` fields and `Checkbox`.
 
 ##Examples
 

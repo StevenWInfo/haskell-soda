@@ -129,9 +129,8 @@ instance SodaType (Maybe Bool) where
     toUrlPart (Just True) = "true"
     toUrlPart (Just False) = "false"
 
--- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/money.html SODA's Money type>. Currently it is just a newtype with double, which is obviously inaccurate. It should possibly be a fixed precision number to the hundreths place, although it could also be an integer representing cents. We'll also have to research into if this SODA type is used to represent other currencies as well.
+-- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/money.html SODA's Money type>. The precision beyond the hundreths place doesn't make sense for how most currecies, including the U.S. dollar, is represented, but this datatype can represent any currency whose representation's precision is not necessarily restricted to the hundreths place.
 newtype Money = Money { getMoney :: Double } deriving (Show, Eq)
--- I could at least maybe limit the precision when putting in URL even if I can't in the type itself yet.
 instance SodaType Money where
     toUrlPart m = "'" ++ (show . getMoney $ m) ++ "'"
 
@@ -139,7 +138,7 @@ instance SodaNumeric Money
 instance SodaPseudoNumeric Money
 instance SodaOrd Money
 
--- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/double.html SODA's Double type>.
+-- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/double.html SODA's Double type>, is just a Haskell Double type.
 instance SodaType Double where
     toUrlPart = show
 
@@ -167,7 +166,7 @@ instance SodaType SodaText where
 instance SodaOrd SodaText
 
 -- Cuts off instead of rounding because I have no idea of a good way to handle rounding things like 999.9 milliseconds. If anyone has any better idea of how to handle this, let me know. I suppose I could test and see if the API will handle greater precision, even if it doesn't use it.
--- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/floating_timestamp.html SODA's Floating Timestamp Type>. The names a bit different because floating timestamp seemed a bit long. The precision and rounding of this value need improvement.
+-- |The type that corresponds with <https://dev.socrata.com/docs/datatypes/floating_timestamp.html SODA's Floating Timestamp Type>. The name is a bit different because floating timestamp seemed a bit long. The precision and rounding of this type need improvement.
 type Timestamp = UTCTime
 instance SodaType Timestamp where
     toUrlPart t = (formatTime defaultTimeLocale tsFormat t) ++ "." ++ ms
