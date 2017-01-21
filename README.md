@@ -1,19 +1,13 @@
 #haskell-soda
-Haskell bindings for the Socrata Open Data API (SODA).
+This library provides Haskell bindings for the Socrata Open Data API (SODA). The bindings are currently designed for the 2.1 version of the SODA. Currently the library only contains functionality for consumer/query related API calls. It doesn't have any functionality for the publishing side of the API. However, if there's demand for it, then that could be in the plans for the future.
 
 *Disclaimer:* This is not an official library from Socrata. There aren't any official Haskell bindings for SODA (or any other unofficial ones that I'm aware of), but if you want to use some official bindings for some other programming languages, you can find them at the SODA documentation page foor [Libraries & SDKs](https://dev.socrata.com/libraries/).
 
-This library is designed to put many of the specifications of SODA into the types of the library. This attempts to constrain the URL - mostly the URL parameters - such that you will have a much greater guarantee at compile time that the API calls of your compiled program will succeed. It is also intended not to restrict any legitimate API calls from being created, but if it does, create a github issue.
-
 As long as the code using this library compiles, you will be very likely to construct a well formed query, even if the pieces of a query are constructed in many disparate other pieces of code. It gives you more confidence that your queries are well formed over string construction in several ways. It gives a strong guarantee that the query will be syntactically correct. This library will always put closing parenthesis when they are needed, will always put the right number of parameters for any functions, and ensures many other structural rules are followed when creating a query. It also gives some moderate semantic guarantees as well. All of the SoQL query [datatypes](https://dev.socrata.com/docs/datatypes/#,) have been encoded into the types that this library uses. This will prevent things like `$where=location = 3 + 'Foo'` from ever being constructed. These guarantees are also made at compile time, so as long as your code compiles you won't have to worry about those problems. No runtime error or exception handling required.
-
-The bindings are currently designed for the 2.1 version of the SODA.
-
-It will probably be quite a while until it is ready for use in any sort of production environment. That could be sped up with some help, though!  I'm still pretty new to creating larger projects with Haskell, so any suggestions or pull requests are more than welcome.
 
 The library requires a lot more boilerplate than I would have liked, but with the higher guarantees that the library gives you, you at least get something for that boilerplate. If you're making queries as part of a hobby project, then this might not be the library you want to use, and you could probably get away with just simply constructing URL strings. However, if you need a higher degree of confidence that your query will be correctly constructed and return values, then this library might be helpful. It might also be more helpful if you are writing a lot of code that combines SODA queries from smaller parts, and don't require long static queries from being written out. We could also possibly reduce the boilerplate in the future with something like Haskell Generics or Template Haskell, although I don't have any specific plans yet.
 
-Currently the library only contains functionality for consumer/query related API calls. It doesn't have any functionality for the publishing side of the API. However, if there's demand for it, then that could be in the plans for the future.
+This library is still very new, so it will probably be a while until it is ready for use in any sort of production environment. That could be sped up with some help, though!  I'm still pretty new to creating larger projects with Haskell, so any suggestions or pull requests are more than welcome.
 
 ##Documentation
 
@@ -49,6 +43,8 @@ If you aren't familiar with GADTs, you don't have to worry. The library should h
 
 (Explain the response type as well).
 
+(Note how the operators all begin with a "$" and are similar to the normal operators).
+
 ##Tips
 
 Since it's somewhat annoying to put type declerations for `Column` values inline, I recommend defining constants for all of the columns that you are going to use in one batch, and then just use those throughout your code.
@@ -64,10 +60,9 @@ If you can I actually recommend you *don't* use OverloadedStrings in the same fi
 (put some examples closer to the top).
 
 ```haskell
-category :: Column SodaText
-category = Column "category"
-
+category = Column "category" :: Column SodaText
 item = Column "item" :: Column SodaText
 
-getSodaResponse "data.ct.gov" "y6p2-px98" $ emptyQuery { filters = Just [ category $= SodaVal "Fruit", item $= SodaVal "Peaches"] }
+getSodaResponse "data.ct.gov" "y6p2-px98" $
+    emptyQuery { filters = Just [ category $= SodaVal "Fruit", item $= SodaVal "Peaches"] }
 ```
