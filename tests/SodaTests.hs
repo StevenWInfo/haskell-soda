@@ -7,7 +7,7 @@ import Test.Tasty
 import Test.Tasty.HUnit
 
 import Data.Aeson
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.ByteString.Char8 as BS
 import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Types.Status as Status
@@ -96,6 +96,29 @@ tests = testGroup "Soda Tests"
                        , having = Just . Having $ ((Column "avg_mag") :: Column SodaNum) $> sn 1.0-- Points out that aliases need to be improved.
                        }
         theResponse @?= [[("avg_mag",RSodaNum (SodaNum {getSodaNum = 1.01}))],[("avg_mag",RSodaNum (SodaNum {getSodaNum = 1.02}))],[("avg_mag",RSodaNum (SodaNum {getSodaNum = 1.03}))]]
+    , testCase "One of the examples I'll have in the README" $ do
+        theResponse <- getSodaResponse testDomain testDataset $
+            emptyQuery { selects = Just [ Select magnitude, Alias (region $++ SodaVal " " $++ source) "region_and_source"]
+                       , wheres  = Just . Where $
+                            IsNotNull region 
+                            $&& IsNotNull source 
+                            $&& IsNotNull location 
+                            $&& WithinCircle location (sn 63) (sn (-147.0)) (sn 60000)
+                       , orders  = Just $ [Order magnitude ASC]
+                       , limit   = Just 3
+                       }
+        let mag = (safeHead theResponse >>= lookup "magnitude" >>= checkNum)
+        mag @?= Just 0.3
+        let regSource = (safeHead theResponse >>= lookup "region_and_source" >>= checkText)
+        regSource @?= Just "82km E of Cantwell, Alaska ak"
+        let stringMag = mag >>= (Just . (\mag -> mag ++ " magnitude ") . show)
+        flip (@?=) "0.3 magnitude 82km E of Cantwell, Alaska ak" $ case ((++) <$> stringMag <*> regSource) of
+            Nothing -> "Nothing here"
+            Just x  -> x
+        let mags = map (\x -> lookup "magnitude" x >>= checkNum >>= (Just . (\mag -> mag ++ " magnitude ") . show)) theResponse
+        let regSources = map (\x -> lookup "region_and_source" x >>= checkText) theResponse
+        zipWith (\mag rs -> fromMaybe "Nothing here" $ (++) <$> mag <*> rs) mags regSources @?= ["0.3 magnitude 82km E of Cantwell, Alaska ak", "0.6 magnitude 64km E of Cantwell, Alaska ak", "0.8 magnitude 73km SSW of Delta Junction, Alaska ak"]
+        theResponse @?= [[("region_and_source",RSodaText "82km E of Cantwell, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.3}))],[("region_and_source",RSodaText "64km E of Cantwell, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.6}))],[("region_and_source",RSodaText "73km SSW of Delta Junction, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.8}))]]
     ]
     where
         testDomain  = "soda.demo.socrata.com"
@@ -109,6 +132,12 @@ tests = testGroup "Soda Tests"
         sn = SodaVal . SodaNum
         sodaE = Expr . SodaVal
         sodaM = SodaVal . Just
+        safeHead [] = Nothing
+        safeHead (x:xs) = Just x
+        checkNum (RSodaNum num) = Just (getSodaNum num)
+        checkNum _ = Nothing
+        checkText (RSodaText text) = Just text
+        checkText _ = Nothing
 
 source             = Column "source"             :: Column SodaText
 earthquake_id      = Column "source"             :: Column SodaText

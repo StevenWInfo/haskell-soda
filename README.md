@@ -85,8 +85,6 @@ Using the `getSodaBody` function you can send a query to a SODA dataset and get 
 
 The `ReturnValue` type is an abstract data type (ADT) that is just an encoding of all of the different SodaTypes into one type with a different constructor for each type. A `ReturnType` constructed by the `RPoint` constructor will have type `Point`.
 
-In summary, your average query to SODA will return a `Response` filled with `Row`s, out of which you can select one, `lookup` a key/field in that row, and check the `ReturnType` for the value of the type you were expecting.
-
 You can also use `getStringBody` to get the response from a SODA query call as a string.
 
 If something goes wrong with the query, it will throw an `IO` exception. Most likely for a 400 if the query wasn't constructed correctly for the dataset, or if the query isn't well formed. That or either a 404 or a 500 response.
@@ -133,6 +131,34 @@ foo val columns = map (($=) val) columns
 
 bar :: () -> IO Response
 
+```
+
+This example is a bit contrived but it queries a dataset with the SODA call: https://soda.demo.socrata.com/resource/6yvf-kk3n.json?$select=magnitude, region || ' ' || source as region_and_source&$where=region IS NOT NULL AND source IS NOT NULL AND location IS NOT NULL AND within_circle(location, 63.0, -147.0, 60000.0)&$order=magnitude ASC&$limit=3
+
+It then handles the response to concatenate the magnitude and the `region_and_source` together for all returned rows to get the Haskell list: `["0.3 magnitude 82km E of Cantwell, Alaska ak", "0.6 magnitude 64km E of Cantwell, Alaska ak", "0.8 magnitude 73km SSW of Delta Junction, Alaska ak"]`
+
+```haskell
+-- Queries can return empty lists to be sure to not use the partial head on them!
+safeHead []                = Nothing
+safeHead (x:xs)            = Just x
+checkNum (RSodaNum num)    = Just (getSodaNum num)
+checkNum _                 = Nothing
+checkText (RSodaText text) = Just text
+checkText _                = Nothing
+
+magRegSource = do theResponse <- getSodaResponse testDomain testDataset $
+    emptyQuery { selects = Just [ Select magnitude, Alias (region $++ SodaVal " " $++ source) "region_and_source"]
+               , wheres  = Just . Where $
+                    IsNotNull region 
+                    $&& IsNotNull source 
+                    $&& IsNotNull location
+                    $&& WithinCircle location (sn 63) (sn (-147.0)) (sn 60000)
+               , orders  = Just $ [Order magnitude ASC]
+               , limit   = Just 3
+               }
+    let mags = map (\x -> lookup "magnitude" x >>= checkNum >>= (Just . (\mag -> mag ++ " magnitude ") . show)) theResponse
+    let regSources = map (\x -> lookup "region_and_source" x >>= checkText) theResponse
+    return $ zipWith (\mag rs -> fromMaybe "Problem extracting" $ (++) <$> mag <*> rs) mags regSources
 ```
 
 (Probably need examples that actually use the response too).
