@@ -55,18 +55,20 @@ These types hold all the information that we need in order to create values. How
 This means that the Haskell type of these elements of a query will have to indicate two different things: which of the 3 parts of a SODA query it makes up, and what SODA datatype does that part represent. For this, there are several different types which "wrap around" the SODA datatypes we have already established.
 
 - `SodaVal` for values
-- `Column` for the columns
+- `Column` for the columns. *Note*: While the other kinds of elements are usually able to infer the datatype from the value given to the data constructor, Column needs to have its type declared explicitly because there's nothing in the value given to indicate what type it should be.
 - `SodaFunc`, `SodaAgg`, and `SodaOp` for the different functions which make up longer expressions. They are split up into three different types for other uses in the library, and also to split up what would have been a type with a lot of constructors. They contain general SODA functions, SODA aggregate functions, and SODA operators respectively. A complete list which also details the types that all the "function elements" take and produce is located at the Haddock documentation for [SODA functions](http://stevenw.info/haskell-soda/0.1.0.0).
 
 Some examples of SODA elements:
 ```haskell
-let walkableDistance = SodaVal (SodaNum 58) :: SodaType SodaNum
+sn = SodaVal . SodaNum
 
-let station = Column "station" :: Column Point -- Note: While the other kinds of elements are usually able to infer the datatype from the value given to the data constructor, Column needs to have its type declared explicitly because there's nothing in the value given to indicate what type it should be.
+walkableDistance = sn 58 :: SodaType SodaNum
 
-let stationDistance = Distance (station) (Point 45.3 -87.2) :: SodaFunc SodaNum
+station = Column "station" :: Column Point
 
-let isWalkable = Between (stationDistance $* SodaVal (SodaNum 2)) (SodaNum 7) (walkableDistance $+ (SodaNum 3) :: SodaFunc Checkbox
+stationDistance = Distance (station) (Point 45.3 -87.2) :: SodaFunc SodaNum
+
+isWalkable = Between (stationDistance $* sn 2) (sn 7) (walkableDistance $+ sn 3) :: SodaFunc Checkbox
 ```
 
 The outer type gives you and the compiler the information of whether it's a value, column, or function/expression, and the inner type gives you information about what the SODA datatype that the given query part will eventually produce.
@@ -75,7 +77,7 @@ The SODA datatypes are also grouped into smaller subsets represented by [several
 
 The `case`, `in`, and `not in` SODA functions take a varying amount of arguments which are all heterogenious with respect to the outer type. This means we have to use a special type called `Expr` to help us construct a heterogenous list of arguments. You'll have to use the `Expr` data constructor on all arguments to the corresponding `SodaFunc` constructor.
 
-In order to make the code look more like the actual queries they represent, all of the SODA operators can be created using custom Haskell operators. All of the operators are prefixed with (`$`). Due to some restrictions, such as the fact that Haskell can only make symbols out of non-alphanumeric characters, some operators such as `AND` had to be changed slightly, so check the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0/SodaFunctions.html#g:1) to use the correct operators. The alterations should be intuitive though.
+ All of the SODA operators can be constructed with defined operators which are all prefixed with (`$`). Due to some restrictions, some operators such as `AND` had to be changed slightly, so check the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0/SodaFunctions.html#g:1) to use the correct operators. The alterations should be intuitive though.
 
 ###SODA Responses
 
