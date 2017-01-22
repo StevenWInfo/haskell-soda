@@ -16,6 +16,10 @@ This library is still very new, so it will probably be a while until it is ready
 
 You can find the official documentation at the [Socrata website](https://dev.socrata.com/).
 
+Besides the outline given below, you can also look at the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0) for a more detailed description of the different parts of the library. For those of you very familiar with Haskell, Haddock documentation and especially GADTs, you can probably go directly there and be able to pick it up pretty quickly. For those that are less familiar with any of those things, reading the following documentation alongside the Haddock documentation will probably be helpful.
+
+To summarize the the main way to make a call to SODA will be by giving a domain string, dataset ID string, and a `Query` which is a custom type. You will construct the different clauses of a query using the different typed SODA elements. You'll get back a value of type `Response` which you can pick apart to get back the values you are querying for in the Haskell interpretation of SODA datatypes, which were also used in the query.
+
 ###Query Structure
 
 The main part of the query is specified using a value of the `Query` type. `Query` is just a record type where every field corresponds to one of the [SoQL Clauses](https://dev.socrata.com/docs/queries/), with the addition of a field for creating simple filters. Due to some name clashes with other functions in Haskell, the field accessor names differ a little, so you should probably check out the [Haddock documentation for Query](http:/stevenw.info/haskell-soda/0.1.0.0/Query.html) to see how the field names differ, and the overall structure of the Query type. Note that changing the subquery field isn't actually used in the rest of the library yet, because implementing subqueries will take a little more work that hasn't been done yet. Each field is also a Maybe type to indicate whether any particular clause is even set and added to the query.
@@ -60,21 +64,19 @@ The outer type gives you and the compiler the information of whether it's a valu
 
 For those who are aware of what generalized algebraic data types (GADTs) are, they are used extensively throughout the construction of the different query parts, as well as throughout the library. If you aren't familiar with GADTs, you don't have to worry. The library should hopefully be simple enough to use without having to completely understand them. The only things you will probably notice are that some things that are data constructors in the library's code produce types you may not expect, and that sometimes it may seem like those constructors will make some types seemingly "disappear" (in the same way as existential types if you're familiar with those). If you just consider those data constructors as more like "regular" functions though, it may be a little simpler. If you would like to know more about how GADTs work, though, there are resources such as the [Haskell wikibook](https://en.wikibooks.org/wiki/Haskell/GADT) that are helpful.
 
-(Note how the operators all begin with a "$" and are similar to the normal operators).
-
-(Not sure if the reference to all of the types, constructors, and functions should be in a seperate section).
-
-(I could also put the documentation in different markdown files in other places in the library).
+In order to make the code look more like the actual queries they represent, all of the SODA operators can be created using custom Haskell operators. All of the operators are prefixed with (`$`). Due to some restrictions, such as the fact that Haskell can only make symbols out of non-alphanumeric characters, some operators such as `AND` had to be changed slightly, so check the [Haddock documentation](http://127.0.0.1:8000/haskell-soda/0.1.0.0/SodaFunctions.html#g:1) to use the correct operators. The alterations should be intuitive though.
 
 ###SODA Responses
 
-(Document that you may need to catch exceptions for 404 and other errors).
+Using the `getSodaBody` function you can send a query to a SODA dataset and get an `IO` response back interpreted into the Haskell datatypes that we created for the different SODA types. When you send out a query, you'll get back a value of type `IO Response` which is just an `IO` list of `Row`s which are in turn lists of `(String, ReturnValue)` tuples. The `Row`s are just specific association lists which means you can access them with functions like `lookup`.
 
-(Explain the response type as well).
+The `ReturnValue` type is an abstract data type (ADT) that is just an encoding of all of the different SodaTypes into one type with a different constructor for each type. A `ReturnType` constructed by the `RPoint` constructor will have type `Point`.
 
-###Reference
+In summary, your average query to SODA will return a `Response` filled with `Row`s, out of which you can select one, `lookup` a key/field in that row, and check the `ReturnType` for the value of the type you were expecting.
 
-You can find the Haddock documentation, which can be used as a reference, [here](http://stevenw.info/haskell-soda/0.1.0.0).
+You can also use `getStringBody` to get the response from a SODA query call as a string.
+
+If something goes wrong with the query, it will throw an `IO` exception. Most likely for a 400 if the query wasn't constructed correctly for the dataset, or if the query isn't well formed. That or either a 404 or a 500 response.
 
 ##Tips
 
