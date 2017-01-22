@@ -49,7 +49,7 @@ import Debug.Trace
  - I have the column type, but I suppose we could have aliases which aren't columns, but aren't concrete values.
  -}
 
--- |Obviously completely untrue, but I'll use it to keep track of where I want it to be true.
+-- |Obviously completely untrue, but it's currently being used to keep track of where we want it to be true.
 type NonNegative = Int
 
 -- |The type of a simple filter query part.
