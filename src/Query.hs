@@ -107,17 +107,17 @@ offset int
 -- |The type of the Query itself.
 -- The query is represented as a Haskell record type, and you can add to or modify a query made by the bindings by creating, adding to, and/or modifying a value of type Query.
 data Query = Query { selects  :: Maybe [Select]
-                     , filters  :: Maybe [Filter] -- Type with columns and contents
-                     , wheres   :: Maybe Where -- Is the lowercase where allowed?
-                     , orders   :: Maybe [Order]
-                     , groups   :: Maybe [Group] -- Depends on the select clause. Also, might need an existential type.
-                     , having   :: Maybe Having -- Depends on the group clause. Similar to where clause.
-                     , limit    :: Maybe NonNegative
-                     , offset   :: Maybe NonNegative
-                     , search   :: Maybe String -- |$q parameter
-                     , subquery :: Maybe Query -- Not sure what to do 
-                     , bom      :: Maybe Bool
-                     }
+                   , filters  :: Maybe [Filter] -- Type with columns and contents
+                   , wheres   :: Maybe Where -- Is the lowercase where allowed?
+                   , orders   :: Maybe [Order]
+                   , groups   :: Maybe [Group] -- Depends on the select clause. Also, might need an existential type.
+                   , having   :: Maybe Having -- Depends on the group clause. Similar to where clause.
+                   , limit    :: Maybe NonNegative
+                   , offset   :: Maybe NonNegative
+                   , search   :: Maybe String -- |$q parameter
+                   , subquery :: Maybe Query -- |Doesn't currently actually do anything yet.
+                   , bom      :: Maybe Bool
+                   }
 
 -- |A useful value since we're often building queries from nothing.
 emptyQuery :: Query
@@ -170,7 +170,7 @@ filtersToParam filters' = map filterToParam filters'
 selectsToParam :: [Select] -> [(String, String)]
 selectsToParam selects' = [("$select", intercalate ", " $ map selectToParam selects')]
     where selectToParam (Select col) = toUrlParam col
-          selectToParam (Alias col alias) = (toUrlParam col) ++ " as " ++ alias
+          selectToParam (Alias col alias) = (toUrlParam col) ++ " AS " ++ alias
 
 wheresToParam :: Where -> [(String, String)]
 wheresToParam (Where clause) = [("$where", toUrlParam clause)]
