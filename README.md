@@ -18,7 +18,7 @@ You can find the official documentation at the [Socrata website](https://dev.soc
 
 Besides the outline given below, you can also look at the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0) for a more detailed description of the different parts of the library. For those of you very familiar with Haskell, Haddock documentation and especially GADTs, you can probably go directly there and be able to pick it up pretty quickly. For those that are less familiar with any of those things, reading the following documentation alongside the Haddock documentation will probably be helpful.
 
-To summarize the the main way to make a call to SODA will be by giving a domain string, dataset ID string, and a `Query` which is a custom type. You will construct the different clauses of a query using the different typed SODA elements. You'll get back a value of type `Response` which you can pick apart to get back the values you are querying for in the Haskell interpretation of SODA datatypes, which were also used in the query.
+To summarize the main way to make a call to SODA, will be by giving a domain string, dataset ID string, and a `Query` which is a custom type. You will construct the different clauses of a query using the different typed SODA elements. You'll get back a value of type `Response` which you can pick apart to get back the values you are querying for in the Haskell interpretation of SODA datatypes, which were also used in the query.
 
 ###Query Structure
 
@@ -42,29 +42,42 @@ Some of the clauses have some special types of their own, mostly because we need
 
 ###Query Elements
 
-3 types of parts to an element in a SODA query:
+There are three kinds of elements in a SODA query:
 
 - Values
 - Columns (which are sort of like variables)
 - Expressions (Like `upper("Hello" || " world")`)
 
-All of these things can have any of the types described by the [SODA documentation](https://dev.socrata.com/docs/datatypes/). This library contains Haskell equivalents to those types which you can find a listing of, and what the Haskell structure of each type is at the [Haddock documentation for datatypes](http://stevenw.info/haskell-soda/0.1.0.0/Datatypes.html).
+Each of these three kinds of elements represent something during the evaluation of a query with a datatype. A value has a type, columns represent values of a single type, and functions will give a single type given elements of specified types. All of these types are described at the SODA level by the [SODA documentation](https://dev.socrata.com/docs/datatypes/). This library contains Haskell equivalents to those types which you can find a listing of, and what the Haskell structure of each type is at the [Haddock documentation for datatypes](http://stevenw.info/haskell-soda/0.1.0.0/Datatypes.html).
 
 These types hold all the information that we need in order to create values. However, we still need to create columns and expressions, and if they're going to interact with these typed values, like in `upper('foo') || upper('bar')` or `salary + '1000.00'`, then they will have to have types that can interact with those value types. In other words, we will have to be able to indicate that things like the function `upper(...)` will produce something that has the type `Text` and that a column such as `salary` has the type `Money`.
 
-This means that the Haskell type of these components of a query will have to indicate two different things: which of the 3 parts of a SODA query it makes up, and what SODA datatype does that part represent. For this, there are several different types which "wrap around" the SODA datatypes we have already established.
+This means that the Haskell type of these elements of a query will have to indicate two different things: which of the 3 parts of a SODA query it makes up, and what SODA datatype does that part represent. For this, there are several different types which "wrap around" the SODA datatypes we have already established.
 
 - `SodaVal` for values
 - `Column` for the columns
-- `SodaFunc`, `SodaAgg`, and `SodaOp` for the different functions which make up longer expressions. They are split up into three different types for other uses in the library, and also to split up what would have been a type with a lot of constructors. They contain general SODA functions, SODA aggregate functions, and SODA operators respectively.
+- `SodaFunc`, `SodaAgg`, and `SodaOp` for the different functions which make up longer expressions. They are split up into three different types for other uses in the library, and also to split up what would have been a type with a lot of constructors. They contain general SODA functions, SODA aggregate functions, and SODA operators respectively. A complete list which also details the types that all the "function elements" take and produce is located at the Haddock documentation for [SODA functions](http://stevenw.info/haskell-soda/0.1.0.0).
 
-(Give examples of how all of these things are used in construction).
+Some examples of SODA elements:
+```haskell
+let walkableDistance = SodaVal (SodaNum 58) :: SodaType SodaNum
+
+let station = Column "station" :: Column Point -- Note: While the other kinds of elements are usually able to infer the datatype from the value given to the data constructor, Column needs to have its type declared explicitly because there's nothing in the value given to indicate what type it should be.
+
+let stationDistance = Distance (station) (Point 45.3 -87.2) :: SodaFunc SodaNum
+
+let isWalkable = Between (stationDistance $* SodaVal (SodaNum 2)) (SodaNum 7) (walkableDistance $+ (SodaNum 3) :: SodaFunc Checkbox
+```
 
 The outer type gives you and the compiler the information of whether it's a value, column, or function/expression, and the inner type gives you information about what the SODA datatype that the given query part will eventually produce.
 
-For those who are aware of what generalized algebraic data types (GADTs) are, they are used extensively throughout the construction of the different query parts, as well as throughout the library. If you aren't familiar with GADTs, you don't have to worry. The library should hopefully be simple enough to use without having to completely understand them. The only things you will probably notice are that some things that are data constructors in the library's code produce types you may not expect, and that sometimes it may seem like those constructors will make some types seemingly "disappear" (in the same way as existential types if you're familiar with those). If you just consider those data constructors as more like "regular" functions though, it may be a little simpler. If you would like to know more about how GADTs work, though, there are resources such as the [Haskell wikibook](https://en.wikibooks.org/wiki/Haskell/GADT) that are helpful.
+The SODA datatypes are also grouped into smaller subsets represented by [several typeclasses](). This is to put some constraints on the input element types for some SODA functions. For example, the first parameter of SODA's `within_circle(...)` shouldn't be non-geometric types like `Text`, but it can be one of several geometric types like `Point`, or `Polygon`. Consequently, `WithinCircle` has the typeclass constraint which contains all fo the geometric SODA datatypes called `SodaGeo` on the SODA datatype of the first element.
 
-In order to make the code look more like the actual queries they represent, all of the SODA operators can be created using custom Haskell operators. All of the operators are prefixed with (`$`). Due to some restrictions, such as the fact that Haskell can only make symbols out of non-alphanumeric characters, some operators such as `AND` had to be changed slightly, so check the [Haddock documentation](http://127.0.0.1:8000/haskell-soda/0.1.0.0/SodaFunctions.html#g:1) to use the correct operators. The alterations should be intuitive though.
+(explain Expr a bit)
+
+For those who are aware of what generalized algebraic data types (GADTs) are, they are used extensively throughout the construction of the different query parts, as well as throughout the library. If you aren't familiar with GADTs, you don't have to worry, the library should hopefully be simple enough to use without having to completely understand them. The only things you will probably notice are that some things that are data constructors in the library's code produce types you may not expect, and that sometimes it may seem like those constructors will make some types seemingly "disappear" (in the same way as existential types if you're familiar with those). If you just consider those data constructors as more like "regular" functions though, it may be a little simpler. If you would like to know more about how GADTs work, though, there are resources such as the [Haskell wikibook](https://en.wikibooks.org/wiki/Haskell/GADT) that are helpful.
+
+In order to make the code look more like the actual queries they represent, all of the SODA operators can be created using custom Haskell operators. All of the operators are prefixed with (`$`). Due to some restrictions, such as the fact that Haskell can only make symbols out of non-alphanumeric characters, some operators such as `AND` had to be changed slightly, so check the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0/SodaFunctions.html#g:1) to use the correct operators. The alterations should be intuitive though.
 
 ###SODA Responses
 
