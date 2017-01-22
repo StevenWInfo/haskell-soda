@@ -26,9 +26,7 @@ You can find the official documentation at the [Socrata website](https://dev.soc
 - Columns (which are sort of like variables)
 - Expressions (Like `upper("Hello" || " world")`)
 
-All of these things can have any of the types described by the SODA documentation. This library contains Haskell equivalents to those types.
-
-*Show all the types? Also show their structure?*
+All of these things can have any of the types described by the [SODA documentation](https://dev.socrata.com/docs/datatypes/). This library contains Haskell equivalents to those types which you can find a listing of, and what the Haskell structure of each type is at the [Haddock documentation for datatypes](stevenw.info/haskell-soda/0.1.0.0/Datatypes.html).
 
 These types hold all the information that we need in order to create values. However, we still need to create columns and expressions, and if they're going to interact with these typed values, like in `upper('foo') || upper('bar')` or `salary + '1000.00'`, then they will have to have types that can interact with those value types. In other words, we will have to be able to indicate that things like the function `upper(...)` will produce something that has the type `Text` and that a column such as `salary` has the type `Money`.
 
@@ -58,75 +56,7 @@ For those who are aware of what generalized algebraic data types (GADTs) are, th
 
 ###Reference
 
-Once I make the Haddock documentation easily viewable, I'll probably replace this section and have it point to that.
-
-####SODA datatypes
-
-All of these types are part of the SodaType typeclass. Some are also grouped into subtypeclasses to put additional constraints on some of the SODA functions. You can view the details of how the types are grouped in Datatype.hs.
-
-<dl>
-    <dt>Money<dt>
-    <dd>
-        The type that corresponds with <a href="https://dev.socrata.com/docs/datatypes/money.html">SODA's Money type</a>. The precision beyond the hundreths place doesn't make sense for how most currencies, including the U.S. dollar, is represented, but this datatype can represent any currency whose representation's precision is not necessarily restricted to the hundreths place.
-    </dd>
-
-    <dt>Double<dt>
-    <dd>
-        The type that corresponds with <a href="https://dev.socrata.com/docs/datatypes/double.html">SODA's Double type</a>. It's just a Haskell Double type.
-    </dd>
-
-    <dt>Number<dt>
-    <dd>
-        The type that corresponds with <a href="https://dev.socrata.com/docs/datatypes/double.html">SODA's Number type</a>. It's also currently just a newtype around Double. Number is actually supposed to have arbitrary precision, and is a bit repetative as a double since we already have double, but I wasn't exactly sure how to implement it. We'll have to look around for true arbitrary precision Haskell types.
-    </dd>
-
-    <dt>SodaText<dt>
-    <dd>
-        The type that corresponds with <a href="https://dev.socrata.com/docs/datatypes/text.html">SODA's Text type</a>. The difference in the name of the Haskell type and the SODA type is to prevent collisions and confusion with the popular Haskell Text type.
-    </dd>
-
-    <dt>Double<dt>
-    <dd>
-        The type that corresponds with <a href="https://dev.socrata.com/docs/datatypes/floating_timestamp.html">SODA's Floating Timestamp Type</a>. The name is a bit different because floating timestamp seemed a bit long. The precision and rounding of this type need improvement.
-    </dd>
-
-    <dt>Point<dt>
-    <dd>
-        The type that corresponds with <a href="https://dev.socrata.com/docs/datatypes/point.html">SODA's Point Type</a>. I didn't make it a simple tuple because the order of the longitude and latitude differ a bit in places. Also, this is a bit more descriptive.
-    </dd>
-
-    <dt>MultiPoint<dt>
-    <dd>
-        The type that Corresponds with <a href="https://dev.socrata.com/docs/datatypes/multipoint.html">SODA's Multipoint type</a>. It's just a Haskell list of `Point`s
-    </dd>
-
-    <dt>Location<dt>
-    <dd>
-        Corresponds with <a href="https://dev.socrata.com/docs/datatypes/location.html">SODA's Location type</a>. According to the SODA documentation, location is a legacy datatype so it is discouraged from being used and some SODA functions available for the point datatype are not available for the location datatype. The constructor is not exported because there the library currently doesn't know how to represent them in the URL. Unless somebody really needs this type, I don't plan on working on it very much.
-    </dd>
-                   
-    <dt>Line<dt>
-    <dd>
-        Corresponds with <a href="https://dev.socrata.com/docs/datatypes/line.html">SODA's Line type</a>. It's just a newtype around a list of `Point`s
-    </dd>
-
-    <dt>MultiLine<dt>
-    <dd>
-        Corresponds with <a href="https://dev.socrata.com/docs/datatypes/multiline.html">SODA's Multiline type</a>. Just a Haskell list of `Line` types.
-    </dd>
-
-    <dt>Polygon<dt>
-    <dd>
-        Corresponds with <a href="https://dev.socrata.com/docs/datatypes/polygon.html">SODA's Polygon type</a>. It's defined as a newtype around a list of list of `Point`s.
-    </dd>
-
-    <dt>MultiPolygon<dt>
-    <dd>
-        Corresponds with <a href="https://dev.socrata.com/docs/datatypes/multipolygon.html">SODA's Multipolygon type</a>. It's defined as a list of `Polygon`s
-    </dd>
-</dl>
-
-###Soda Functions
+You can find the Haddock documentation, which can be used as a reference, [here](stevenw.info/haskell-soda/0.1.0.0).
 
 ##Tips
 
