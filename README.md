@@ -14,9 +14,9 @@
 ##Introduction
 This library provides Haskell bindings for the Socrata Open Data API (SODA). Besides being able to write SODA queries in native Haskell, this library also provides strong compile time guarantees that your queries will be both syntactically and semantically valid
 
-These bindings are currently designed for version 2.1 of SODA. The library also currently only contains functionality for consumer/query related API calls. It doesn't have any functionality for the publishing side of the API. However, if there's demand for it, then that could be in the plans for the future.
-
 *Disclaimer:* This is not an official library from Socrata. There aren't any official Haskell bindings for SODA (or any other unofficial ones that I'm aware of), but if you want to use some official bindings for some other programming languages, you can find them at the SODA documentation page foor [Libraries & SDKs](https://dev.socrata.com/libraries/).
+
+These bindings are currently designed for version 2.1 of SODA. The library also currently only contains functionality for consumer/query related API calls. It doesn't have any functionality for the publishing side of the API. However, if there's demand for it, then that could be in the plans for the future.
 
 The main benefit that this library provides, besides being bindings for Haskell, is that it also gives strong compile-time guarantees that your query is both syntactically and semantically correct, which makes this library unique among the other language bindings for SODA. The structure of the functions make sure that syntactic rules like parenthesis being balanced and the arity of SODA functions are never violated. It also gives semantic guarantees at compile-time as well. All of the SoQL query [datatypes](https://dev.socrata.com/docs/datatypes/#,) have been encoded into the types that this library uses. This will prevent things like `$where=location = 3 + 'Foo'` from ever being constructed without having to even deal with runtime exception handling.
 
@@ -57,11 +57,9 @@ There are three kinds of elements in a SODA query:
 - Columns (which are sort of like variables)
 - Expressions (Like `upper("Hello" || " world")`)
 
-Each of these three kinds of elements represent something during the evaluation of a query with a datatype. A value has a type, columns represent values of a single type, and functions will give a single type given elements of specified types. All of these types are described at the SODA level by the [SODA documentation](https://dev.socrata.com/docs/datatypes/). This library contains Haskell equivalents to those types which you can find a listing of, and what the Haskell structure of each type is at the [Haddock documentation for datatypes](http://stevenw.info/haskell-soda/0.1.0.0/Datatypes.html).
+Each of these three kinds of elements represent something during the evaluation of a query with a datatype. A value has a type, columns represent values of a single type, and functions will give a single type given elements of specified types. All of these types are described at the SODA level by the [SODA documentation](https://dev.socrata.com/docs/datatypes/). This library contains Haskell equivalents to those types which you can find a listing of, and what the Haskell structure of each type is at the Haddock documentation for [datatypes](http://stevenw.info/haskell-soda/0.1.0.0/Datatypes.html).
 
-These types hold all the information that we need in order to create values. However, we still need to create columns and expressions, and if they're going to interact with these typed values, like in `upper('foo') || upper('bar')` or `salary + '1000.00'`, then they will have to have types that can interact with those value types. In other words, we will have to be able to indicate that things like the function `upper(...)` will produce something that has the type `Text` and that a column such as `salary` has the type `Money`.
-
-This means that the Haskell type of these elements of a query will have to indicate two different things: which of the 3 parts of a SODA query it makes up, and what SODA datatype does that part represent. For this, there are several different types which "wrap around" the SODA datatypes we have already established.
+Values, columns, and expressions have to have any of the SODA types in the Haskell values's type, but they also have to be able to be differentiated from eachother. This means that the Haskell type of these elements of a query will have to indicate two different things: which of the 3 parts of a SODA query it makes up, and what SODA datatype does that part represent. For this, there are several different types which "wrap around" the SODA datatypes we have already established.
 
 - `SodaVal` for values
 - `Column` for the columns. *Note*: While the other kinds of elements are usually able to infer the datatype from the value given to the data constructor, Column needs to have its type declared explicitly because there's nothing in the value given to indicate what type it should be.
