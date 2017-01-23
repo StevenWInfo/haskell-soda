@@ -149,8 +149,8 @@ magRegSource = do theResponse <- getSodaResponse "soda.demo.socrata.com" "6yvf-k
 
 This example is a bit construed, but it gives a good example at how you can create complex queries reliably. In real applications you may combine many small and varying pieces of a query using functions spread across several files. The parts of the queries come from so many places and are so complex that it's difficult to track, yet it still creates a working query. Some of the second query even comes from information retrieved from the previous query, which is simple because the types retrieved from the response are the same that are put into the queries.
 ```haskell
-complexQuery [Select] -> (Point -> [Select]) -> IO Response
-complexQuery inputSelect nearPoint  = do
+complexQuery [Select] -> (Point -> [Select]) -> Int -> IO Response
+complexQuery inputSelect nearPoint tolerance = do
     firstResponse <- getSodaResponse testDomain  testDataset $
         emptyQuery { selects = Just [ Select location ]
                    , wheres  = Just . Where $ IsNotNull location $&& IsNotNull magnitude
@@ -158,17 +158,20 @@ complexQuery inputSelect nearPoint  = do
                    , limit   = Just 1
                    }
     let theMax = safeHead firstResponse >>= lookup "location" >>= checkPoint
-    theMax @?= Just (Point {longitude = 144.8994, latitude = 6.5092})
     secondResponse <- case theMax of
         Nothing       -> return []
         Just maxPoint -> getSodaResponse "odn.data.socrata.com"  "h7w8-g2pa" $
                             emptyQuery { selects = Just $ nearPoint maxPoint ++ inputSelect
                                        , wheres  = Just . Where $
-                                            Intersects (Column "the_geom" :: Column MultiPolygon) (SodaVal maxPoint)
-                                            $|| Paren ((Column "intptlat" :: Column SodaText) `specialCompare` (SodaVal "33.6942153"))
+                                            Intersects the_geom (SodaVal maxPoint)
+                                            $|| WithinCircle (Column "the_geom" :: Column MultiPolygon) (sn $ latitude maxPoint) (sn $ longitude maxPoint) (sn $ tolerance)
                                        , limit   = Just 1
                                        }
     return secondResponse
+    where location  = Column "location"  :: Column Point
+          magnitude = Column "magnitude" :: Column SodaNum
+          the_geom  = Column "the_geom"  :: Column MultiPolygon
+          intptlat  = Column "intptlat"  :: Column SodaText
 
 inputFunction :: Point -> [Select]
 inputFunction earthquake
@@ -182,5 +185,5 @@ euclidean point1 point2 = sqrt $ ((x1 - x2) ^^ 2) - ((y1 - y2) ^^ 2)
           x2 = longitude point2
           y2 = latitude point2
 
-earthquakeInfo = complexQuery [ Select (Column "name" :: Column SodaText) ] inputFunction
+earthquakeInfo = complexQuery [ Select (Column "name" :: Column SodaText) ] inputFunction 1000000
 ```

@@ -134,10 +134,10 @@ tests = testGroup "Soda Tests"
                                 emptyQuery { selects = Just $ inputFunction maxPoint ++ inputSelect
                                            , wheres  = Just . Where $
                                                 Intersects (Column "the_geom" :: Column MultiPolygon) (SodaVal maxPoint)
-                                                $|| Paren ((Column "intptlat" :: Column SodaText) `specialCompare` (SodaVal "33.6942153"))
+                                                $|| WithinCircle (Column "the_geom" :: Column MultiPolygon) (sn $ latitude maxPoint) (sn $ longitude maxPoint) (sn $ 1000000)
                                            , limit   = Just 1
                                            }
-        secondResponse @?= [[("name",RSodaText "Fayette"),("geoid",RSodaText "0125840")]]
+        secondResponse @?= [[("name",RSodaText "San Jose (Oleai)"),("geoid",RSodaText "6947205")]]
     ]
     where
         testDomain  = "soda.demo.socrata.com"
@@ -159,8 +159,6 @@ tests = testGroup "Soda Tests"
         checkText _ = Nothing
         checkPoint (RPoint point) = Just point
         checkPoint _ = Nothing
-        specialCompare (Column "intptlat") x = (Column "intptlat") $== (SodaVal "+" $++ x)
-        specialCompare a b = a $== b
         inputSelect = [ Select (Column "name" :: Column SodaText) ]
 
 inputFunction :: Point -> [Select]
