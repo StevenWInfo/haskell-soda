@@ -121,17 +121,17 @@ tests = testGroup "Soda Tests"
         theResponse @?= [[("region_and_source",RSodaText "82km E of Cantwell, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.3}))],[("region_and_source",RSodaText "64km E of Cantwell, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.6}))],[("region_and_source",RSodaText "73km SSW of Delta Junction, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.8}))]]
     , testCase "Testing more complicated query creation" $ do
         firstResponse <- getSodaResponse testDomain  testDataset $
-            emptyQuery { selects = Just [ Select location ]
+            emptyQuery { selects = Just [ Select location, Select region]
                        , wheres  = Just . Where $ IsNotNull location $&& IsNotNull magnitude
                        , orders  = Just $ [ Order magnitude DESC ]
                        , limit   = Just 1
                        }
-        let theMax = safeHead firstResponse >>= lookup "location" >>= checkPoint
-        theMax @?= Just (Point {longitude = 144.8994, latitude = 6.5092})
-        secondResponse <- case theMax of
+        let maxLocation = safeHead firstResponse >>= lookup "location" >>= checkPoint
+        maxLocation @?= Just (Point {longitude = 144.8994, latitude = 6.5092})
+        secondResponse <- case maxLocation of
             Nothing       -> return []
             Just maxPoint -> getSodaResponse "odn.data.socrata.com"  "h7w8-g2pa" $
-                                emptyQuery { selects = Just $ inputFunction maxPoint ++ inputSelect
+                                emptyQuery { selects = Just $ (Select geoid) : inputSelect 
                                            , wheres  = Just . Where $
                                                 Intersects (Column "the_geom" :: Column MultiPolygon) (SodaVal maxPoint)
                                                 $|| WithinCircle (Column "the_geom" :: Column MultiPolygon) (sn $ latitude maxPoint) (sn $ longitude maxPoint) (sn $ 1000000)
@@ -147,31 +147,21 @@ tests = testGroup "Soda Tests"
         result      = "[{\"depth\":\"0\",\"earthquake_id\":\"ak11243041\",\"magnitude\":\"1.6\",\"number_of_stations\":\"6\",\"region\":\"36km W of Valdez, Alaska\",\"source\":\"ak\"}]\n"
         selectNotFound :: HttpException -> Maybe Status.Status
         selectNotFound (VanillaHttpException (Http.HttpExceptionRequest _ (Http.StatusCodeException (rec) _))) = Just (Http.responseStatus rec)
-        selectNotFound _ = Nothing
-        sn = SodaVal . SodaNum
-        sodaE = Expr . SodaVal
-        sodaM = SodaVal . Just
-        safeHead [] = Nothing
-        safeHead (x:xs) = Just x
-        checkNum (RSodaNum num) = Just (getSodaNum num)
-        checkNum _ = Nothing
+        selectNotFound _           = Nothing
+        sn                         = SodaVal . SodaNum
+        sodaE                      = Expr . SodaVal
+        sodaM                      = SodaVal . Just
+        safeHead []                = Nothing
+        safeHead (x:xs)            = Just x
+        checkNum (RSodaNum num)    = Just (getSodaNum num)
+        checkNum _                 = Nothing
         checkText (RSodaText text) = Just text
-        checkText _ = Nothing
-        checkPoint (RPoint point) = Just point
-        checkPoint _ = Nothing
-        inputSelect = [ Select (Column "name" :: Column SodaText) ]
+        checkText _                = Nothing
+        checkPoint (RPoint point)  = Just point
+        checkPoint _               = Nothing
+        inputSelect                = [ Select (Column "name" :: Column SodaText) ]
+        geoid                      = Column "geoid"     :: Column SodaText
 
-inputFunction :: Point -> [Select]
-inputFunction earthquake
-    | euclidean earthquake home < 10 = [ Select (Column "geoid" :: Column SodaText) ]
-    | otherwise                    = []
-    where home = Point { longitude = 150, latitude = 10 }
-
-euclidean point1 point2 = sqrt $ ((x1 - x2) ^^ 2) - ((y1 - y2) ^^ 2)
-    where x1 = longitude point1
-          y1 = latitude point1
-          x2 = longitude point2
-          y2 = latitude point2
 source             = Column "source"             :: Column SodaText
 earthquake_id      = Column "earthquake_id"      :: Column SodaText
 version            = Column "version"            :: Column SodaText

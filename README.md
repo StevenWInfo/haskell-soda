@@ -1,16 +1,32 @@
 #haskell-soda
 
 (Table of contents?)
+- [Documentation](#documentation)
+    - [Query Structure](#query-structure)
+    - [Query Elements](#query-elements)
+    - [Soda Responses](#soda-responses)
+    - [Tips](#tips)
+        - [Common Mistakes](#common-mistakes)
+    - [More Examples](#more-examples)
 
 This library provides Haskell bindings for the Socrata Open Data API (SODA). The bindings are currently designed for the 2.1 version of the SODA. Currently the library only contains functionality for consumer/query related API calls. It doesn't have any functionality for the publishing side of the API. However, if there's demand for it, then that could be in the plans for the future.
 
 *Disclaimer:* This is not an official library from Socrata. There aren't any official Haskell bindings for SODA (or any other unofficial ones that I'm aware of), but if you want to use some official bindings for some other programming languages, you can find them at the SODA documentation page foor [Libraries & SDKs](https://dev.socrata.com/libraries/).
 
-The main benefit that this library provides, besides being bindings for Haskell, is that it also gives strong compile-time guarantees that your query is both syntactically and semantically correct, which most, if not all, of the other API bindings to other languages don't give. The structure of the functions make sure that syntactic rules like parenthesis being balanced and the arity of SODA functions are never violated. It also gives some semantic guarantees at compile-time as well. All of the SoQL query [datatypes](https://dev.socrata.com/docs/datatypes/#,) have been encoded into the types that this library uses. This will prevent things like `$where=location = 3 + 'Foo'` from ever being constructed without having to even deal with runtime exception handling.
+The main benefit that this library provides, besides being bindings for Haskell, is that it also gives strong compile-time guarantees that your query is both syntactically and semantically correct, which makes this library unique among the other language bindings for SODA. The structure of the functions make sure that syntactic rules like parenthesis being balanced and the arity of SODA functions are never violated. It also gives some semantic guarantees at compile-time as well. All of the SoQL query [datatypes](https://dev.socrata.com/docs/datatypes/#,) have been encoded into the types that this library uses. This will prevent things like `$where=location = 3 + 'Foo'` from ever being constructed without having to even deal with runtime exception handling.
 
 The library requires more boilerplate and overhead than I would have liked, but you at least get the benefits mentioned above in exchange. If you're making queries as part of a hobby project, then this might not be the library you want to use, and you could probably get away with just simply constructing URL strings. However, if you need a higher degree of confidence that your query will be correctly constructed and return values, then this library might be helpful. It might also be more helpful if you are writing a lot of code that creates SODA queries from combinations of smaller parts, rather than using long static/hardcoded queries. I'm also looking for ways to reduce the boilerplate, but there isn't a specific plan of how to do that yet. You can also reduce some of the boilerplate with some utility functions such as those I describe in the tips section of the documentation.
 
 This library is still very new, so it will probably be a while until it is ready for use in any sort of production environment. That could be sped up with some help, though!  I'm still pretty new to creating larger projects with Haskell, so any suggestions, submitted issues, or pull requests are more than welcome.
+
+The following is a short example of a SODA call with the same URL as `https://data.ct.gov/resource/y6p2-px98.json?category=Fruit&item=Peaches`
+```haskell
+category = Column "category" :: Column SodaText
+item     = Column "item"     :: Column SodaText
+
+response = getSodaResponse "data.ct.gov" "y6p2-px98" $
+    emptyQuery { filters = Just [ category $= SodaVal "Fruit", item $= SodaVal "Peaches"] }
+```
 
 ##Documentation
 
@@ -26,7 +42,7 @@ The main part of the query is specified using a value of the `Query` type. `Quer
 
 To construct a query, I recommend starting with the `emptyQuery` value, which has all of the fields set to `Nothing`, and then assign the desired fields to `Just` some value.
 
-Some of the clauses have some special types of their own, mostly because we need some slightly heterogeneous types to be included in those fields. To learn about how those types are constructed, you can head over to the [Query Clauses](http:/stevenw.info/haskell-soda/0.1.0.0/Query.html#g:1) section of the Haddock documentation.
+Some of the clauses have some special types of their own, mostly because we need some heterogeneous types to be included in those fields. To learn about how those types are constructed, you can head over to the [Query Clauses](http:/stevenw.info/haskell-soda/0.1.0.0/Query.html#g:1) section of the Haddock documentation.
 
 ###Query Elements
 
@@ -77,7 +93,7 @@ You can also use `getStringBody` to get the response from a SODA query call as a
 
 If something goes wrong with the query, it will throw an `IO` exception. Most likely for a 400 if the query wasn't constructed correctly for the dataset, or if the query isn't well formed. That or either a 404 or a 500 response.
 
-##Tips
+###Tips
 
 - Since it's somewhat annoying to put type declerations for `Column` values inline, I recommend defining constants for all of the columns that you are going to use in one batch, and then just use those throughout your code.
 
@@ -87,7 +103,7 @@ If something goes wrong with the query, it will throw an `IO` exception. Most li
 
 - Never forget three of the most functions in functional programming: map, fold, and filter! If you'd like to do something like create a `MultiPoint` with tuples instead of points, or if you'd like a whole bunch of numbers to be `SodaNum`, then these three functions can make things much simpler and more concise.
 
-###Common mistakes
+####Common mistakes
 
 - Don't forget to put `SodaVal` on all values in a query.
 
@@ -97,16 +113,7 @@ If something goes wrong with the query, it will throw an `IO` exception. Most li
 
 - Don't forget to put `Just` on Maybe values like `Query` fields and `Checkbox`.
 
-##Examples
-
-We can use the following code to construct the query `https://data.ct.gov/resource/y6p2-px98.json?category=Fruit&item=Peaches`
-```haskell
-category = Column "category" :: Column SodaText
-item     = Column "item"     :: Column SodaText
-
-response = getSodaResponse "data.ct.gov" "y6p2-px98" $
-    emptyQuery { filters = Just [ category $= SodaVal "Fruit", item $= SodaVal "Peaches"] }
-```
+###More Examples
 
 The following example is a bit contrived but it queries a dataset with the SODA call: `https://soda.demo.socrata.com/resource/6yvf-kk3n.json?$select=magnitude, region || ' ' || source as region_and_source&$where=region IS NOT NULL AND source IS NOT NULL AND location IS NOT NULL AND within_circle(location, 63.0, -147.0, 60000.0)&$order=magnitude ASC&$limit=3`
 
@@ -131,21 +138,21 @@ magRegSource = do theResponse <- getSodaResponse "soda.demo.socrata.com" "6yvf-k
           checkText _                = Nothing
 ```
 
-This example is even more construed, but it gives a good example at how you can create complex queries reliably. In real applications you may combine many small and varying pieces of a query using functions spread across several files. The parts of the queries come from so many places and are so complex that it's difficult to track, yet it still creates a working query. Some of the second query even comes from information retrieved from the previous query, which is simple because the types retrieved from the response are the same that are put into the queries.
+The next example is even more construed, but it gives a good example at how you can create complex queries reliably. In real applications you may combine many small and varying pieces of a query using functions spread across several files. The parts of the queries come from so many places and are so complex that it's difficult to track, yet it still creates a working query. Some of the second query even comes from information retrieved from the previous query, which is simple because the types retrieved from the response are the same that are put into the queries.
 ```haskell
-complexQuery [Select] -> (Point -> [Select]) -> Int -> IO Response
-complexQuery inputSelect nearPoint tolerance = do
+complexQuery [Select] -> Int -> IO Response
+complexQuery inputSelect tolerance = do
     firstResponse <- getSodaResponse testDomain  testDataset $
         emptyQuery { selects = Just [ Select location ]
                    , wheres  = Just . Where $ IsNotNull location $&& IsNotNull magnitude
                    , orders  = Just $ [ Order magnitude DESC ]
                    , limit   = Just 1
                    }
-    let theMax = safeHead firstResponse >>= lookup "location" >>= checkPoint
-    secondResponse <- case theMax of
+    let maxLocation = safeHead firstResponse >>= lookup "location" >>= checkPoint
+    secondResponse <- case maxLocation of
         Nothing       -> return []
         Just maxPoint -> getSodaResponse "odn.data.socrata.com"  "h7w8-g2pa" $
-                            emptyQuery { selects = Just $ nearPoint maxPoint ++ inputSelect
+                            emptyQuery { selects = Just $ (Select geoid) : inputSelect 
                                        , wheres  = Just . Where $
                                             Intersects the_geom (SodaVal maxPoint)
                                             $|| WithinCircle (Column "the_geom" :: Column MultiPolygon) (sn $ latitude maxPoint) (sn $ longitude maxPoint) (sn $ tolerance)
@@ -156,19 +163,8 @@ complexQuery inputSelect nearPoint tolerance = do
           magnitude = Column "magnitude" :: Column SodaNum
           the_geom  = Column "the_geom"  :: Column MultiPolygon
           intptlat  = Column "intptlat"  :: Column SodaText
-          sn = SodaVal . SodaNum
-
-inputFunction :: Point -> [Select]
-inputFunction earthquake
-    | euclidean earthquake home < 10 = [ Select (Column "geoid" :: Column SodaText) ]
-    | otherwise                    = []
-    where home = Point { longitude = 150, latitude = 10 }
-
-euclidean point1 point2 = sqrt $ ((x1 - x2) ^^ 2) - ((y1 - y2) ^^ 2)
-    where x1 = longitude point1
-          y1 = latitude point1
-          x2 = longitude point2
-          y2 = latitude point2
+          geoid     = Column "geoid"     :: Column SodaText
+          sn        = SodaVal . SodaNum
 
 earthquakeInfo = complexQuery [ Select (Column "name" :: Column SodaText) ] inputFunction 1000000
 ```
