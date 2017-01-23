@@ -15,6 +15,7 @@ The types for adding in SODA query level functions into a clause or other part o
 module SodaFunctions
     ( SodaFunc (..)
     , SodaAgg (..)
+    , Paren (Paren)
     -- * SODA binary operators
     -- $ops
     , SodaOp
@@ -179,14 +180,14 @@ instance SodaExpr SodaOp where
     lower a = Left BadLower
 
 -- Possibly have two equals signs for this and one for filters?
--- |The equals comparison operator as mentioned in the <https://dev.socrata.com/docs/datatypes/number.html SODA documentation>. The infix operator $= was already in use for simple filters so I used the double equals notation that many other languages use for the equality comparison.
+-- |The equals comparison operator as mentioned in the <https://dev.socrata.com/docs/datatypes/number.html SODA documentation>. The infix operator $= was already in use for simple filters so I used the double equals notation that many other languages use for the equality comparison. Currently it's a bit restrictive because you should be able to compare different numeric types together, which this doesn't allow. I'll come up with some sort of solution in the future.
 infixr 4 $==
-($==) :: (SodaExpr m, SodaExpr n, SodaNumeric a, SodaNumeric b) => m a -> n b -> SodaOp Checkbox
+($==) :: (SodaExpr m, SodaExpr n, SodaType a) => m a -> n a -> SodaOp Checkbox
 ($==) = Equals
 
--- |The not equals comparison operator as mentioned in the <https://dev.socrata.com/docs/datatypes/number.html SODA documentation>.
+-- |The not equals comparison operator as mentioned in the <https://dev.socrata.com/docs/datatypes/number.html SODA documentation>. It's type is a bit restrictive like $==
 infixr 4 $!=
-($!=) :: (SodaExpr m, SodaExpr n, SodaNumeric a, SodaNumeric b) => m a -> n b -> SodaOp Checkbox
+($!=) :: (SodaExpr m, SodaExpr n, SodaType a) => m a -> n a -> SodaOp Checkbox
 ($!=) = Equals
 
 -- |The \"AND\" boolean operator as mentioned in the <https://dev.socrata.com/docs/queries/where.html SODA documentation>. Since you can't use letters in Haskell operators I chose && as the operator since it's similar to the \"AND\" operator used in many other languages.
