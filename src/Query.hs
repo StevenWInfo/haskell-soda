@@ -14,7 +14,9 @@ Elements which make SoQL and other parts of identifying what data you want easie
 -}
 
 module Query
-    ( NonNegative
+    ( 
+    -- * Query Clause Pieces
+    NonNegative
     , Filter (Filter)
     , ($=)
     , Select (..)
@@ -23,6 +25,7 @@ module Query
     , Order (Order)
     , Group (Group)
     , Having (Having)
+    -- * Query and related functions
     , Query (..)
     , emptyQuery
     , queryToString
@@ -80,8 +83,7 @@ data Order where
 data Where where
     Where :: (SodaExpr m) => m Checkbox -> Where
 
--- Not sure if this should differ much from where. Probably have to determine if aggregated at run time.
--- |The type of the $having query part.
+-- |The type of the $having query part. This section of the query is similar to $where in that it acts like a filter, but it works with aggregate functions which $where doesn't. That restriction isn't encoded into this library yet though.
 data Having where
     Having :: (SodaExpr m) => m Checkbox -> Having
 

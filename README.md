@@ -22,23 +22,11 @@ To summarize the main way to make a call to SODA, will be by giving a domain str
 
 ###Query Structure
 
-The main part of the query is specified using a value of the `Query` type. `Query` is just a record type where every field corresponds to one of the [SoQL Clauses](https://dev.socrata.com/docs/queries/), with the addition of a field for creating simple filters. Due to some name clashes with other functions in Haskell, the field accessor names differ a little, so you should probably check out the [Haddock documentation for Query](http:/stevenw.info/haskell-soda/0.1.0.0/Query.html) to see how the field names differ, and the overall structure of the Query type. Note that changing the subquery field isn't actually used in the rest of the library yet, because implementing subqueries will take a little more work that hasn't been done yet. Each field is also a Maybe type to indicate whether any particular clause is even set and added to the query.
+The main part of the query is specified using a value of the `Query` type. `Query` is just a record type where every field corresponds to one of the [SoQL Clauses](https://dev.socrata.com/docs/queries/), with the addition of a field for creating simple filters. Due to some name clashes with other functions in Haskell, the field accessor names differ a little, so you should probably check out the Haddock documentation for [Query](http:/stevenw.info/haskell-soda/0.1.0.0/Query.html) to see how the field names differ, and the overall structure of the Query type. Note that changing the subquery field isn't actually used in the rest of the library yet, because implementing subqueries will take a little more work that hasn't been done yet. Each field is also a Maybe type to indicate whether any particular clause is even set and added to the query.
 
 To construct a query, I recommend starting with the `emptyQuery` value, which has all of the fields set to `Nothing`, and then assign the desired fields to `Just` some value.
 
-Some of the clauses have some special types of their own, mostly because we need some slightly heterogeneous types to be included in those fields. 
-
-- `Filter`: combines the column and SODA element to represent a filter. It has a utility operator `$=` so you can create a filter by just writing `column $= SodaVal "value"`.
-
-- `Select`: Has a `Select` constructor for specifying normal selects with just a column or other SODA elements, and an `Alias` constructor to also specify, using a string, that SODA element has an alias.
-
-- `Where`: Any Soda element that is, or evaluates to a `Checkbox`. This restriction makes sure it is like a filter, which a WHERE clause is.
-
-- `Having`: Similar to Where, it is constructed with a SODA element that is, or evaluates to a `Checkbox`. The main difference is that this clause can work with aggregate functions, and the WHERE clause cannot. This restriction isn't currently encoded into this library yet, but it is one of the issues I hope to address.
-
-- `Order`: Takes a column to order in the results, as well as an element of the `Sorting` type which just has two constructors to indicate whether it should be ascending or descending.
-
-- `Group`: Takes a column to be grouped for working with aggregates.
+Some of the clauses have some special types of their own, mostly because we need some slightly heterogeneous types to be included in those fields. To learn about how those types are constructed, you can head over to the [Query Clauses](http:/stevenw.info/haskell-soda/0.1.0.0/Query.html#g:1) section of the Haddock documentation.
 
 ###Query Elements
 
@@ -111,10 +99,7 @@ If something goes wrong with the query, it will throw an `IO` exception. Most li
 
 ##Examples
 
-(put some examples closer to the top).
-
-Is the way to create the following query https://data.ct.gov/resource/y6p2-px98.json?category=Fruit&item=Peaches
-
+We can use the following code to construct the query `https://data.ct.gov/resource/y6p2-px98.json?category=Fruit&item=Peaches`
 ```haskell
 category = Column "category" :: Column SodaText
 item     = Column "item"     :: Column SodaText
@@ -123,10 +108,9 @@ response = getSodaResponse "data.ct.gov" "y6p2-px98" $
     emptyQuery { filters = Just [ category $= SodaVal "Fruit", item $= SodaVal "Peaches"] }
 ```
 
-This example is a bit contrived but it queries a dataset with the SODA call: [https://soda.demo.socrata.com/resource/6yvf-kk3n.json?$select=magnitude, region || ' ' || source as region_and_source&$where=region IS NOT NULL AND source IS NOT NULL AND location IS NOT NULL AND within_circle(location, 63.0, -147.0, 60000.0)&$order=magnitude ASC&$limit=3](https://soda.demo.socrata.com/resource/6yvf-kk3n.json?$select=magnitude, region || ' ' || source as region_and_source&$where=region IS NOT NULL AND source IS NOT NULL AND location IS NOT NULL AND within_circle(location, 63.0, -147.0, 60000.0)&$order=magnitude ASC&$limit=3]
+The following example is a bit contrived but it queries a dataset with the SODA call: `https://soda.demo.socrata.com/resource/6yvf-kk3n.json?$select=magnitude, region || ' ' || source as region_and_source&$where=region IS NOT NULL AND source IS NOT NULL AND location IS NOT NULL AND within_circle(location, 63.0, -147.0, 60000.0)&$order=magnitude ASC&$limit=3`
 
 It then handles the response to concatenate the magnitude and the `region_and_source` together for all returned rows to get a Haskell list which is, at the time of writing this: `["0.3 magnitude 82km E of Cantwell, Alaska ak", "0.6 magnitude 64km E of Cantwell, Alaska ak", "0.8 magnitude 73km SSW of Delta Junction, Alaska ak"]`
-
 ```haskell
 magRegSource = do theResponse <- getSodaResponse "soda.demo.socrata.com" "6yvf-kk3n" $
     emptyQuery { selects = Just [ Select magnitude, Alias (region $++ SodaVal " " $++ source) "region_and_source"]
@@ -147,7 +131,7 @@ magRegSource = do theResponse <- getSodaResponse "soda.demo.socrata.com" "6yvf-k
           checkText _                = Nothing
 ```
 
-This example is a bit construed, but it gives a good example at how you can create complex queries reliably. In real applications you may combine many small and varying pieces of a query using functions spread across several files. The parts of the queries come from so many places and are so complex that it's difficult to track, yet it still creates a working query. Some of the second query even comes from information retrieved from the previous query, which is simple because the types retrieved from the response are the same that are put into the queries.
+This example is even more construed, but it gives a good example at how you can create complex queries reliably. In real applications you may combine many small and varying pieces of a query using functions spread across several files. The parts of the queries come from so many places and are so complex that it's difficult to track, yet it still creates a working query. Some of the second query even comes from information retrieved from the previous query, which is simple because the types retrieved from the response are the same that are put into the queries.
 ```haskell
 complexQuery [Select] -> (Point -> [Select]) -> Int -> IO Response
 complexQuery inputSelect nearPoint tolerance = do
@@ -172,6 +156,7 @@ complexQuery inputSelect nearPoint tolerance = do
           magnitude = Column "magnitude" :: Column SodaNum
           the_geom  = Column "the_geom"  :: Column MultiPolygon
           intptlat  = Column "intptlat"  :: Column SodaText
+          sn = SodaVal . SodaNum
 
 inputFunction :: Point -> [Select]
 inputFunction earthquake
