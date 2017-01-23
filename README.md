@@ -6,6 +6,7 @@
 - [Documentation](#documentation)
     - [Query Structure](#query-structure)
     - [Query Elements](#query-elements)
+    - [A Few Extra Notes](#a-few-extra-notes)
     - [Soda Responses](#soda-responses)
     - [Tips](#tips)
         - [Common Mistakes](#common-mistakes)
@@ -37,13 +38,13 @@ response = getSodaResponse "data.ct.gov" "y6p2-px98" $
 
 You can find the official documentation at the [Socrata website](https://dev.socrata.com/).
 
-Besides the outline given below, you can also look at the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0) for a more detailed description of the different parts of the library. For those of you very familiar with Haskell, Haddock documentation and especially GADTs, you can probably go directly there and be able to pick it up pretty quickly. For those that are less familiar with any of those things, reading the following documentation alongside the Haddock documentation will probably be helpful. I'll also be doing some "hand-waving" in the explanations which will make them less accurate, but easier to intuitively understand.
+Besides the outline given below, you can also look at the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0) for a more detailed description of the different parts of the library. For those of you very familiar with Haskell, Haddock documentation, and especially GADTs, you can probably go directly there and be able to pick it up pretty quickly. For those that are less familiar with any of those things, reading the following documentation alongside the Haddock documentation will probably be helpful. I'll also be doing some "hand-waving" in the explanations which will make them less accurate, but easier to intuitively understand.
 
-To summarize the main way to make a call to SODA, will be by giving a domain string, dataset ID string, and a `Query` which is a custom type. You will construct the different clauses of a query using the different typed SODA elements. You'll get back a value of type `Response` which you can pick apart to get back the values you are querying for in the Haskell interpretation of SODA datatypes, which were also used in the query.
+To summarize, the main way to make a call to SODA is by giving a domain string, dataset ID string, and a `Query` to `getSodaResponse`. To create the query you will construct the different clauses of a query using the different typed SODA elements. From `getSodaResponse` you'll get back a value of type `Response` which hold values already interpreted into the same Haskell versions of the SODA types which were also used in the query.
 
 ###Query Structure
 
-The main part of the query is specified using a value of the `Query` type. `Query` is just a record type where every field corresponds to one of the [SoQL Clauses](https://dev.socrata.com/docs/queries/), with the addition of a field for creating simple filters. Due to some name clashes with other functions in Haskell, the field accessor names differ a little, so you should probably check out the Haddock documentation for [Query](http:/stevenw.info/haskell-soda/0.1.0.0/Query.html) to see how the field names differ, and the overall structure of the Query type. Note that changing the subquery field isn't actually used in the rest of the library yet, because implementing subqueries will take a little more work that hasn't been done yet. Each field is also a Maybe type to indicate whether any particular clause is even set and added to the query.
+The main part of the query is specified using a value of the [`Query`](http://stevenw.info/haskell-soda/0.1.0.0/Query.html#g:2) type. `Query` is just a record type where every field corresponds to one of the [SoQL Clauses](https://dev.socrata.com/docs/queries/), with the addition of a field for creating simple filters. Due to some name clashes with other functions in Haskell, the field accessor names differ a little, and the actual names are listed in the Haddock documentation for [Query](http://stevenw.info/haskell-soda/0.1.0.0/Query.html). The Haddock documentation also details the overall structure of the Query type. Each field is also a Maybe type to indicate whether any particular clause is even contained in a query. *Note*: the subquery field doesn't actually do anything yet, because implementing subqueries will take a little more work which hasn't been done yet.
 
 To construct a query, I recommend starting with the `emptyQuery` value, which has all of the fields set to `Nothing`, and then assign the desired fields to `Just` some value.
 
@@ -57,13 +58,14 @@ There are three kinds of elements in a SODA query:
 - Columns (which are sort of like variables)
 - Expressions (Like `upper("Hello" || " world")`)
 
-Each of these three kinds of elements represent something during the evaluation of a query with a datatype. A value has a type, columns represent values of a single type, and functions will give a single type given elements of specified types. All of these types are described at the SODA level by the [SODA documentation](https://dev.socrata.com/docs/datatypes/). This library contains Haskell equivalents to those types which you can find a listing of, and what the Haskell structure of each type is at the Haddock documentation for [datatypes](http://stevenw.info/haskell-soda/0.1.0.0/Datatypes.html).
+Each of these three kinds of elements represent something during the evaluation of a query and each instance has its own datatype. A value has a type, columns represent values of a single type, and functions represent an expression of a certain type. All of the types these elements can represent are described at the SODA level by the [SODA documentation for datatypes](https://dev.socrata.com/docs/datatypes/). This library creates Haskell equivalents to those types to be used when creating a query. You can find a listing of the equivalent Haskell types at the Haddock documentation for [datatypes](http://stevenw.info/haskell-soda/0.1.0.0/Datatypes.html), where you will also find more information about their structures and properties.
 
-Values, columns, and expressions have to have any of the SODA types in the Haskell values's type, but they also have to be able to be differentiated from eachother. This means that the Haskell type of these elements of a query will have to indicate two different things: which of the 3 parts of a SODA query it makes up, and what SODA datatype does that part represent. For this, there are several different types which "wrap around" the SODA datatypes we have already established.
-
+Because values, columns, and expressions are represented differently and have different properties in a query, the Haskell types for these three things differ, even for the same SODA type. To create Haskell values of each of these elements, the Haskell types of those values will have to indicate two different things: which of the 3 kinds of query elements it is, and what SODA datatype that part represents. To accomplish this, the library contains several different Haskell types which "wrap around" the Haskell versions of the SODA datatypes.
 - `SodaVal` for values
-- `Column` for the columns. *Note*: While the other kinds of elements are usually able to infer the datatype from the value given to the data constructor, Column needs to have its type declared explicitly because there's nothing in the value given to indicate what type it should be.
-- `SodaFunc`, `SodaAgg`, and `SodaOp` for the different functions which make up longer expressions. They are split up into three different types for other uses in the library, and also to split up what would have been a type with a lot of constructors. They contain general SODA functions, SODA aggregate functions, and SODA operators respectively. A complete list which also details the types that all the "function elements" take and produce is located at the Haddock documentation for [SODA functions](http://stevenw.info/haskell-soda/0.1.0.0).
+- `Column` for the columns.
+- `SodaFunc`, `SodaAgg`, and `SodaOp` for the different functions which make up longer expressions.
+
+The reason the SODA functions are split up into three different types are for other uses in the library, and to break up what would have been a very large type into smaller pieces. They represent general SODA functions, SODA aggregate functions, and SODA operators respectively. A complete list which also details the types that all the "function elements" take and produce is located at the Haddock documentation for [SODA functions](http://stevenw.info/haskell-soda/0.1.0.0/SodaFunctions.html).
 
 Some examples of SODA elements:
 ```haskell
@@ -78,13 +80,15 @@ stationDistance = Distance (station) (Point 45.3 -87.2) :: SodaFunc SodaNum
 isWalkable = Between (stationDistance $* sn 2) (sn 7) (walkableDistance $+ sn 3) :: SodaFunc Checkbox
 ```
 
-The outer type gives you and the compiler the information of whether it's a value, column, or function/expression, and the inner type gives you information about what the SODA datatype that the given query part will eventually produce.
+The outer type gives you and the compiler the information of whether it's a value, column, or function/expression, and the inner type gives you information about what the SODA datatype that the given query part will eventually produce. *Note*: While the other kinds of elements are usually able to infer the datatype from the value given to the data constructor, Column needs to have its type declared explicitly because there's nothing in the value given to indicate what type it should be.
 
-The SODA datatypes are also grouped into smaller subsets represented by [several typeclasses](). This is to put some constraints on the input element types for some SODA functions. For example, the first parameter of SODA's `within_circle(...)` shouldn't be non-geometric types like `Text`, but it can be one of several geometric types like `Point`, or `Polygon`. Consequently, `WithinCircle` has the typeclass constraint which contains all fo the geometric SODA datatypes called `SodaGeo` on the SODA datatype of the first element.
+####A Few Extra Notes
 
-The `case`, `in`, and `not in` SODA functions take a varying amount of arguments which are all heterogenious with respect to the outer type. This means we have to use a special type called `Expr` to help us construct a heterogenous list of arguments. You'll have to use the `Expr` data constructor on all arguments to the corresponding `SodaFunc` constructor.
+The SODA datatypes are also grouped into smaller subsets represented by [several typeclasses](http://stevenw.info/haskell-soda/0.1.0.0/Datatypes.html#g:1). This is to put some constraints on the input element types for some SODA functions. For example, the first parameter of `within_circle(...)` should be geometric types like `Point`, or `Polygon`, but not something like `Text`. Consequently, the corresponding Haskell function `WithinCircle` has the `SodaGeo` typeclass constraint on the first parameter, which contains the geometric SODA datatypes.
 
- All of the SODA operators can be constructed with defined operators which are all prefixed with (`$`). Due to some restrictions, some operators such as `AND` had to be changed slightly, so check the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0/SodaFunctions.html#g:1) to use the correct operators. The alterations should be intuitive though. Because 
+The `case`, `in`, and `not in` SODA functions take a varying amount of arguments which are all heterogenious with respect to the "outer type". This means we have to use a special type called `Expr` to help us construct a heterogenous list of arguments. You'll have to use the `Expr` data constructor on different parts of the input arguments to those functions.
+
+ All of the SODA operators can be constructed with defined operators which are all prefixed with (`$`). Due to some restrictions, some operators such as `AND` had to be changed slightly, so check the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0/SodaFunctions.html#g:1) to use the correct operators. The alterations should be intuitive though. Because you have to specify specific types in Haskell, but SODA operators like `+` can take a mix of any of the numeric SODA types, the resulting type has to be determined somehow, and right now it returns the same "inner type" as the element to the right of the operator.
 
 ###SODA Responses
 
