@@ -77,7 +77,7 @@ The SODA datatypes are also grouped into smaller subsets represented by [several
 
 The `case`, `in`, and `not in` SODA functions take a varying amount of arguments which are all heterogenious with respect to the outer type. This means we have to use a special type called `Expr` to help us construct a heterogenous list of arguments. You'll have to use the `Expr` data constructor on all arguments to the corresponding `SodaFunc` constructor.
 
- All of the SODA operators can be constructed with defined operators which are all prefixed with (`$`). Due to some restrictions, some operators such as `AND` had to be changed slightly, so check the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0/SodaFunctions.html#g:1) to use the correct operators. The alterations should be intuitive though.
+ All of the SODA operators can be constructed with defined operators which are all prefixed with (`$`). Due to some restrictions, some operators such as `AND` had to be changed slightly, so check the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0/SodaFunctions.html#g:1) to use the correct operators. The alterations should be intuitive though. Because 
 
 ###SODA Responses
 
@@ -113,6 +113,8 @@ If something goes wrong with the query, it will throw an `IO` exception. Most li
 
 (put some examples closer to the top).
 
+Is the way to create the following query https://data.ct.gov/resource/y6p2-px98.json?category=Fruit&item=Peaches
+
 ```haskell
 category = Column "category" :: Column SodaText
 item     = Column "item"     :: Column SodaText
@@ -121,32 +123,12 @@ response = getSodaResponse "data.ct.gov" "y6p2-px98" $
     emptyQuery { filters = Just [ category $= SodaVal "Fruit", item $= SodaVal "Peaches"] }
 ```
 
-Is the way to create the following query https://data.ct.gov/resource/y6p2-px98.json?category=Fruit&item=Peaches
+This example is a bit contrived but it queries a dataset with the SODA call: [https://soda.demo.socrata.com/resource/6yvf-kk3n.json?$select=magnitude, region || ' ' || source as region_and_source&$where=region IS NOT NULL AND source IS NOT NULL AND location IS NOT NULL AND within_circle(location, 63.0, -147.0, 60000.0)&$order=magnitude ASC&$limit=3](https://soda.demo.socrata.com/resource/6yvf-kk3n.json?$select=magnitude, region || ' ' || source as region_and_source&$where=region IS NOT NULL AND source IS NOT NULL AND location IS NOT NULL AND within_circle(location, 63.0, -147.0, 60000.0)&$order=magnitude ASC&$limit=3]
 
-(Create some examples that show off when it would be most useful. Things like wanting to be very sure it will work, and constructing queries from smaller parts. Maybe make an example where it would be ambiguous and difficult to know what the other parts of the application are putting into the query, but that you can be confident will work with this library. Things like getting unknown types and values from functions, but as long as their types line up it should be fine.)
-
-```haskell
-foo :: SodaType a => SodaVal a -> [Column a] -> [Filter]
-foo val columns = map (($=) val) columns
-
-bar :: () -> IO Response
-
-```
-
-This example is a bit contrived but it queries a dataset with the SODA call: https://soda.demo.socrata.com/resource/6yvf-kk3n.json?$select=magnitude, region || ' ' || source as region_and_source&$where=region IS NOT NULL AND source IS NOT NULL AND location IS NOT NULL AND within_circle(location, 63.0, -147.0, 60000.0)&$order=magnitude ASC&$limit=3
-
-It then handles the response to concatenate the magnitude and the `region_and_source` together for all returned rows to get the Haskell list: `["0.3 magnitude 82km E of Cantwell, Alaska ak", "0.6 magnitude 64km E of Cantwell, Alaska ak", "0.8 magnitude 73km SSW of Delta Junction, Alaska ak"]`
+It then handles the response to concatenate the magnitude and the `region_and_source` together for all returned rows to get a Haskell list which is, at the time of writing this: `["0.3 magnitude 82km E of Cantwell, Alaska ak", "0.6 magnitude 64km E of Cantwell, Alaska ak", "0.8 magnitude 73km SSW of Delta Junction, Alaska ak"]`
 
 ```haskell
--- Queries can return empty lists to be sure to not use the partial head on them!
-safeHead []                = Nothing
-safeHead (x:xs)            = Just x
-checkNum (RSodaNum num)    = Just (getSodaNum num)
-checkNum _                 = Nothing
-checkText (RSodaText text) = Just text
-checkText _                = Nothing
-
-magRegSource = do theResponse <- getSodaResponse testDomain testDataset $
+magRegSource = do theResponse <- getSodaResponse "soda.demo.socrata.com" "6yvf-kk3n" $
     emptyQuery { selects = Just [ Select magnitude, Alias (region $++ SodaVal " " $++ source) "region_and_source"]
                , wheres  = Just . Where $
                     IsNotNull region 
@@ -159,6 +141,46 @@ magRegSource = do theResponse <- getSodaResponse testDomain testDataset $
     let mags = map (\x -> lookup "magnitude" x >>= checkNum >>= (Just . (\mag -> mag ++ " magnitude ") . show)) theResponse
     let regSources = map (\x -> lookup "region_and_source" x >>= checkText) theResponse
     return $ zipWith (\mag rs -> fromMaybe "Problem extracting" $ (++) <$> mag <*> rs) mags regSources
+    where checkNum (RSodaNum num)    = Just (getSodaNum num)
+          checkNum _                 = Nothing
+          checkText (RSodaText text) = Just text
+          checkText _                = Nothing
 ```
 
-(Probably need examples that actually use the response too).
+This example is a bit construed, but it gives a good example at how you can create complex queries reliably. In real applications you may combine many small and varying pieces of a query using functions spread across several files. The parts of the queries come from so many places and are so complex that it's difficult to track, yet it still creates a working query. Some of the second query even comes from information retrieved from the previous query, which is simple because the types retrieved from the response are the same that are put into the queries.
+```haskell
+complexQuery [Select] -> (Point -> [Select]) -> IO Response
+complexQuery inputSelect nearPoint  = do
+    firstResponse <- getSodaResponse testDomain  testDataset $
+        emptyQuery { selects = Just [ Select location ]
+                   , wheres  = Just . Where $ IsNotNull location $&& IsNotNull magnitude
+                   , orders  = Just $ [ Order magnitude DESC ]
+                   , limit   = Just 1
+                   }
+    let theMax = safeHead firstResponse >>= lookup "location" >>= checkPoint
+    theMax @?= Just (Point {longitude = 144.8994, latitude = 6.5092})
+    secondResponse <- case theMax of
+        Nothing       -> return []
+        Just maxPoint -> getSodaResponse "odn.data.socrata.com"  "h7w8-g2pa" $
+                            emptyQuery { selects = Just $ nearPoint maxPoint ++ inputSelect
+                                       , wheres  = Just . Where $
+                                            Intersects (Column "the_geom" :: Column MultiPolygon) (SodaVal maxPoint)
+                                            $|| Paren ((Column "intptlat" :: Column SodaText) `specialCompare` (SodaVal "33.6942153"))
+                                       , limit   = Just 1
+                                       }
+    return secondResponse
+
+inputFunction :: Point -> [Select]
+inputFunction earthquake
+    | euclidean earthquake home < 10 = [ Select (Column "geoid" :: Column SodaText) ]
+    | otherwise                    = []
+    where home = Point { longitude = 150, latitude = 10 }
+
+euclidean point1 point2 = sqrt $ ((x1 - x2) ^^ 2) - ((y1 - y2) ^^ 2)
+    where x1 = longitude point1
+          y1 = latitude point1
+          x2 = longitude point2
+          y2 = latitude point2
+
+earthquakeInfo = complexQuery [ Select (Column "name" :: Column SodaText) ] inputFunction
+```

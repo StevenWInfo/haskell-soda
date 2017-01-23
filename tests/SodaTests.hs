@@ -119,6 +119,25 @@ tests = testGroup "Soda Tests"
         let regSources = map (\x -> lookup "region_and_source" x >>= checkText) theResponse
         zipWith (\mag rs -> fromMaybe "Nothing here" $ (++) <$> mag <*> rs) mags regSources @?= ["0.3 magnitude 82km E of Cantwell, Alaska ak", "0.6 magnitude 64km E of Cantwell, Alaska ak", "0.8 magnitude 73km SSW of Delta Junction, Alaska ak"]
         theResponse @?= [[("region_and_source",RSodaText "82km E of Cantwell, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.3}))],[("region_and_source",RSodaText "64km E of Cantwell, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.6}))],[("region_and_source",RSodaText "73km SSW of Delta Junction, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.8}))]]
+    , testCase "Testing more complicated query creation" $ do
+        firstResponse <- getSodaResponse testDomain  testDataset $
+            emptyQuery { selects = Just [ Select location ]
+                       , wheres  = Just . Where $ IsNotNull location $&& IsNotNull magnitude
+                       , orders  = Just $ [ Order magnitude DESC ]
+                       , limit   = Just 1
+                       }
+        let theMax = safeHead firstResponse >>= lookup "location" >>= checkPoint
+        theMax @?= Just (Point {longitude = 144.8994, latitude = 6.5092})
+        secondResponse <- case theMax of
+            Nothing       -> return []
+            Just maxPoint -> getSodaResponse "odn.data.socrata.com"  "h7w8-g2pa" $
+                                emptyQuery { selects = Just $ inputFunction maxPoint ++ inputSelect
+                                           , wheres  = Just . Where $
+                                                Intersects (Column "the_geom" :: Column MultiPolygon) (SodaVal maxPoint)
+                                                $|| Paren ((Column "intptlat" :: Column SodaText) `specialCompare` (SodaVal "33.6942153"))
+                                           , limit   = Just 1
+                                           }
+        secondResponse @?= [[("name",RSodaText "Fayette"),("geoid",RSodaText "0125840")]]
     ]
     where
         testDomain  = "soda.demo.socrata.com"
@@ -138,10 +157,26 @@ tests = testGroup "Soda Tests"
         checkNum _ = Nothing
         checkText (RSodaText text) = Just text
         checkText _ = Nothing
+        checkPoint (RPoint point) = Just point
+        checkPoint _ = Nothing
+        specialCompare (Column "intptlat") x = (Column "intptlat") $== (SodaVal "+" $++ x)
+        specialCompare a b = a $== b
+        inputSelect = [ Select (Column "name" :: Column SodaText) ]
 
+inputFunction :: Point -> [Select]
+inputFunction earthquake
+    | euclidean earthquake home < 10 = [ Select (Column "geoid" :: Column SodaText) ]
+    | otherwise                    = []
+    where home = Point { longitude = 150, latitude = 10 }
+
+euclidean point1 point2 = sqrt $ ((x1 - x2) ^^ 2) - ((y1 - y2) ^^ 2)
+    where x1 = longitude point1
+          y1 = latitude point1
+          x2 = longitude point2
+          y2 = latitude point2
 source             = Column "source"             :: Column SodaText
-earthquake_id      = Column "source"             :: Column SodaText
-version            = Column "source"             :: Column SodaText
+earthquake_id      = Column "earthquake_id"      :: Column SodaText
+version            = Column "version"            :: Column SodaText
 magnitude          = Column "magnitude"          :: Column SodaNum
 depth              = Column "depth"              :: Column SodaNum
 number_of_stations = Column "number_of_stations" :: Column SodaNum
