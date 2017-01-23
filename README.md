@@ -92,19 +92,19 @@ The `case`, `in`, and `not in` SODA functions take a varying amount of arguments
 
 ###SODA Responses
 
-Using the `getSodaBody` function you can send a query to a SODA dataset and get an `IO` response back interpreted into the Haskell datatypes that we created for the different SODA types. When you send out a query, you'll get back a value of type `IO Response` which is just an `IO` list of `Row`s which are in turn lists of `(String, ReturnValue)` tuples. The `Row`s are just specific association lists which means you can access them with functions like `lookup`.
+Using the `getSodaBody` function you can send a query to a SODA dataset and get an `IO` response back interpreted into the Haskell datatypes that we created for the different SODA types. Using the `getSodaBody` function you can send a query to a SODA dataset and you'll get back a value of type `IO Response`. The `Response` type is a list of `Row`s, and a `Row` is an association list of `(String, ReturnValue)` tuples. You can easily retreive values from rows using functions like `lookup`, which is in the Haskell Prelude.
 
-The `ReturnValue` type is an abstract data type (ADT) that is just an encoding of all of the different SodaTypes into one type with a different constructor for each type. A `ReturnType` constructed by the `RPoint` constructor will have type `Point`.
+The `ReturnValue` type is an abstract data type (ADT) that can hold any of the different SodaTypes. It has a different constructor to hold each SODA datatype. For example, a `ReturnType` constructed by the `RPoint` constructor will have type `Point`. Due to a [known issue](#28) responses won't include values of SODA `Double` types. `SodaNum` and `Money` return just fine though.
 
-You can also use `getStringBody` to get the response from a SODA query call as a string.
+You can also use `getStringBody` to get the response from a SODA query call as a string, if you want to interpret it yourself, or need it in a particular response format.
 
-If something goes wrong with the query, it will throw an `IO` exception. Most likely for a 400 if the query wasn't constructed correctly for the dataset, or if the query isn't well formed. That or either a 404 or a 500 response.
+If something goes wrong between the time the query is sent and received, it will throw an `HttpException` as described by the underlying HTTP library [Req](https://hackage.haskell.org/package/req-0.2.0/docs/Network-HTTP-Req.html#t:HttpException).
 
 ###Tips
 
 - Since it's somewhat annoying to put type declerations for `Column` values inline, I recommend defining constants for all of the columns that you are going to use in one batch, and then just use those throughout your code.
 
-- To reduce some of the boilerplate, I recommend making some small functions that combine some of the constructors and other necessary parts. I didn't add these to the library because there could potentially be a lot of them, and it would have been a lot of memorizing to make a lot of them useful, but if you quickly create them one by one, they are simple enough to make when they are needed. Similarly, for some of the longer names you can create some shorter constant or function names.
+- To reduce some of the boilerplate, I recommend making some small functions that combine some of the constructors and other necessary parts. I didn't add these to the library because there could potentially be a lot of them, and it would have been a lot of memorization to use, but they are simple enough to make when they are needed. Similarly, for some of the longer names you can create some shorter constants or function names.
 
 - If you can, I actually recommend you *don't* use OverloadedStrings in the same file as queries are being built because sometimes the compiler gets confused with strings and this library.
 
@@ -118,13 +118,13 @@ If something goes wrong with the query, it will throw an `IO` exception. Most li
 
 - Don't forget to use `Expr` on things that need expression type hidden.
 
-- Don't forget to put `Just` on Maybe values like `Query` fields and `Checkbox`.
+- Don't forget to put `Just` on Maybe values like `Query` fields and `Checkbox` values.
 
 ###More Examples
 
-The following example is a bit contrived but it queries a dataset with the SODA call: `https://soda.demo.socrata.com/resource/6yvf-kk3n.json?$select=magnitude, region || ' ' || source as region_and_source&$where=region IS NOT NULL AND source IS NOT NULL AND location IS NOT NULL AND within_circle(location, 63.0, -147.0, 60000.0)&$order=magnitude ASC&$limit=3`
+The following example is a bit contrived but it queries a dataset with the URL `https://soda.demo.socrata.com/resource/6yvf-kk3n.json?$select=magnitude, region || ' ' || source as region_and_source&$where=region IS NOT NULL AND source IS NOT NULL AND location IS NOT NULL AND within_circle(location, 63.0, -147.0, 60000.0)&$order=magnitude ASC&$limit=3`
 
-It then handles the response to concatenate the magnitude and the `region_and_source` together for all returned rows to get a Haskell list which is, at the time of writing this: `["0.3 magnitude 82km E of Cantwell, Alaska ak", "0.6 magnitude 64km E of Cantwell, Alaska ak", "0.8 magnitude 73km SSW of Delta Junction, Alaska ak"]`
+It then handles the response to concatenate the magnitude and the `region_and_source` together for all returned rows to get a Haskell list which is, at the time of writing this, the following: `["0.3 magnitude 82km E of Cantwell, Alaska ak", "0.6 magnitude 64km E of Cantwell, Alaska ak", "0.8 magnitude 73km SSW of Delta Junction, Alaska ak"]`
 ```haskell
 magRegSource = do theResponse <- getSodaResponse "soda.demo.socrata.com" "6yvf-kk3n" $
     emptyQuery { selects = Just [ Select magnitude, Alias (region $++ SodaVal " " $++ source) "region_and_source"]
@@ -145,7 +145,7 @@ magRegSource = do theResponse <- getSodaResponse "soda.demo.socrata.com" "6yvf-k
           checkText _                = Nothing
 ```
 
-The next example is even more construed, but it gives a good example at how you can create complex queries reliably. In real applications you may combine many small and varying pieces of a query using functions spread across several files. The parts of the queries come from so many places and are so complex that it's difficult to track, yet it still creates a working query. Some of the second query even comes from information retrieved from the previous query, which is simple because the types retrieved from the response are the same that are put into the queries.
+The next example is even more contrived, but it demonstrates how you can create complex queries reliably. In real applications you may combine many small and varying query elements using functions from all different parts of your code. The parts of the queries come from so many places and are so complex that it's difficult to track, yet it still creates a well formed, type-enforced query. Some of the second query even comes from information retrieved from the previous query, which is made simpler because the types retrieved from a response are the same that are used in the queries.
 ```haskell
 complexQuery [Select] -> Int -> IO Response
 complexQuery inputSelect tolerance = do
