@@ -33,6 +33,10 @@ tests = testGroup "Soda Function Tests"
         (toUrlParam $ WithinCircle loc (sn 45.23) (sn 55.8) (sn 45.2)) @?= "within_circle(some_place, 45.23, 55.8, 45.2)"
     , testCase "Testing addition with different numeric types." $
         (toUrlParam $ (sn 5.1 $+ (sv $ Money 7.20) $+ dblCol)) @?= "5.1 + '7.2' + some_double"
+    , testCase "Testing addition with different numeric types." $
+        (toUrlParam $ (sn 5.1 $+ (sv $ Money 7.20) $+ dblCol)) @?= "5.1 + '7.2' + some_double"
+    , testCase "Testing an example that's in the documentation." $
+        (toUrlParam $ Between (locationDistance $* sn 3) (sn 7) (sn 58 $+ sn 3)) @?= "distance_in_meters(location, 'POINT (45.3 -87.2)') * 3.0 between 7.0 and 58.0 + 3.0"
     ]
     where sv :: (SodaType a) => a -> SodaVal a -- Note to self: GADTs are finicky
           sv     = SodaVal
@@ -42,3 +46,5 @@ tests = testGroup "Soda Function Tests"
           pt a b = sv $ Point { longitude                                                                  = a, latitude = b }
           loc    = Column "some_place" :: Column Point
           dblCol = Column "some_double" :: Column Double
+          locationDistance = Distance location $ SodaVal (Point 45.3 (-87.2) )
+          location = Column "location" :: Column Point

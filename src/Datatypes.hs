@@ -25,6 +25,7 @@ module Datatypes
     , Column (Column)
     , SodaVal (SodaVal)
     , SodaType
+    -- * Extra typeclasses for constraints
     , SodaNumeric
     , SodaPseudoNumeric
     , SodaOrd
