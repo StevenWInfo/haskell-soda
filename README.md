@@ -15,7 +15,7 @@
 ##Introduction
 This library provides Haskell bindings for the Socrata Open Data API (SODA).
 
-*Disclaimer: This is not an official library from Socrata. There aren't currently any official Haskell bindings for SODA (or any other unofficial ones that I'm aware of), but if you want to use some official bindings for some other programming languages, you can find them at the SODA documentation page for [Libraries & SDKs](https://dev.socrata.com/libraries/).*
+*Disclaimer: This is not an official library from Socrata. There currently aren't any official Haskell bindings for SODA (or any other unofficial ones that I'm aware of), but if you want to use the official bindings for another programming language, you can find a list of them at the SODA documentation page for [Libraries & SDKs](https://dev.socrata.com/libraries/).*
 
 The main benefit to using this library, besides being able to make calls to SODA natively in Haskell, is that it gives strong compile-time guarantees that your query is both syntactically and semantically correct, which makes this library unique among the other language bindings for SODA. The structure of the functions assures that syntactic rules, like balanced parenthesis and SODA functions having the right amount of input parameters, are never violated. It also gives semantic guarantees because all of the SoQL query [datatypes](https://dev.socrata.com/docs/datatypes/#,) have been encoded into the types that this library uses, and are used with all values, columns, and SODA functions. This will prevent things like `$where=location = 3 + 'Foo'` from ever being constructed without even having to deal with runtime exception handling.
 
@@ -23,7 +23,7 @@ The library currently requires more boilerplate than I would have liked, but you
 
 These bindings are currently designed for version 2.1 of SODA. The library also currently only contains functionality for consumer/query related API calls; It doesn't have any functionality for the publishing side of the API. However, if there's demand for it, then that could be in the plans for the future.
 
-This library is still very new, so it will probably be a while until it is ready for use in any sort of production environment. That could be sped up with some help, though!  I'm still pretty new to creating larger projects with Haskell, so any suggestions, submitted issues, or pull requests are more than welcome.
+This library is still very new, so the design might fluctuate a bit initially and it will probably be a while until it is ready for use in any sort of production environment. Getting to production quality could be sped up with some help, though!  I'm still pretty new to creating larger projects with Haskell, so any suggestions, submitted issues, or pull requests are more than welcome.
 
 The following is a short example of a SODA call for the URL `https://data.ct.gov/resource/y6p2-px98.json?category=Fruit&item=Peaches`
 ```haskell
@@ -40,15 +40,15 @@ You can find the official documentation for the API itself at the [Socrata websi
 
 Besides the outline given below, you can also look at the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0) for a more detailed description of the different parts of the library. For those of you very familiar with Haskell, Haddock documentation, and especially GADTs, you can probably go directly there and be able to pick it up pretty quickly. For those that are less familiar with any of those things, reading the following documentation alongside the Haddock documentation will probably be helpful. I'll also be doing some "hand-waving" in the following explanations which might make them less accurate, but easier to intuitively understand.
 
-To summarize, the main way to make a call to SODA is by giving a domain string, dataset ID string, and a `Query` to `getSodaResponse`. To create the query you will construct the different clauses of a query using the different, typed SODA elements. From `getSodaResponse` you'll get back a value of type `Response` which holds values already interpreted into the same Haskell versions of the SODA types which were also used in the query.
+To summarize, the main way to make a call to SODA is by giving a domain string, dataset ID string, and a `Query` to `getSodaResponse`. To create the query you will construct the different clauses of a query using the different, typed SODA elements. From `getSodaResponse` you'll get back a value of type `Response` which holds values already interpreted into the same Haskell versions of the SODA types which are also used in queries.
 
 ###Query Structure
 
-The main part of the query is specified using a value of the [`Query`](http://stevenw.info/haskell-soda/0.1.0.0/Query.html#g:2) type. `Query` is just a record type where every field corresponds to one of the [SoQL Clauses](https://dev.socrata.com/docs/queries/), with the addition of a field for creating simple filters. Due to some name clashes with other functions in Haskell, the field accessor names differ a little, and the actual names are listed in the Haddock documentation for [Query](http://stevenw.info/haskell-soda/0.1.0.0/Query.html). The Haddock documentation also details the overall structure of the Query type. Each field is also a Maybe type to indicate whether any particular clause is even contained in a query. *Note*: the subquery field doesn't actually do anything yet, because implementing subqueries will take a little more work which hasn't been done yet.
+The main part of the query is specified using a value of the [`Query`](http://stevenw.info/haskell-soda/0.1.0.0/Query.html#g:2) type. `Query` is just a record type where every field corresponds to one of the [SoQL Clauses](https://dev.socrata.com/docs/queries/), with the addition of a field for creating simple filters. Due to some name clashes with other functions in Haskell, the field accessor names differ a little, and the actual names are listed in the Haddock documentation for [Query](http://stevenw.info/haskell-soda/0.1.0.0/Query.html). The Haddock documentation also details the overall structure of the Query type. Each field is also a Maybe type to indicate whether any particular clause is even contained in a query. *Note*: the subquery field doesn't actually do anything yet because implementing subqueries will take a little more work which hasn't been done yet.
 
-To construct a query, I recommend starting with the `emptyQuery` value, which has all of the fields set to `Nothing`, and then assign the desired fields to `Just` some value.
+To construct a query, I recommend starting with the `emptyQuery` value, which has all of the fields set to `Nothing`, and then assigning the desired fields to `Just` some value.
 
-Some of the clauses have some special types of their own, mostly because we need some heterogeneous types to be included in those fields. To learn about how those types are constructed, you can head over to the [Query Clauses](http:/stevenw.info/haskell-soda/0.1.0.0/Query.html#g:1) section of the Haddock documentation.
+Some of the clauses have some special types of their own which you can learn about how those types are constructed over at the [Query Clauses](http:/stevenw.info/haskell-soda/0.1.0.0/Query.html#g:1) section of the Haddock documentation.
 
 ###Query Elements
 
@@ -80,10 +80,10 @@ multiplier = sn 3                 :: SodaVal SodaNum
 -- station
 station = Column "station"     :: Column Point
 
--- distance_in_meters(station, 'POINT 45.3 -87.2')
-stationDistance  = Distance station (SodaVal (Point 45.3 (-87.2))) :: SodaFunc SodaNum
+-- distance_in_meters(station, 'POINT 45.3 87.2')
+stationDistance  = Distance station (SodaVal (Point 45.3 87.2)) :: SodaFunc SodaNum
 
--- distance_in_meters(station, 'POINT 45.3 -87.2') * 3.0 between 7 and 58 + 3
+-- distance_in_meters(station, 'POINT 45.3 87.2') * 3.0 between 7 and 58 + 3
 isWalkable       = Between (stationDistance $* multiplier) (sn 7) (walkableDistance $+ sn 3) :: SodaFunc Checkbox
 ```
 
@@ -101,7 +101,7 @@ The outer type gives you and the compiler the information of whether it's a valu
 
 Using the `getSodaBody` function you can send a query to a SODA dataset and get an `IO` response back which has already been interpreted into the Haskell datatypes that that corresponds to the different SODA types. Using the `getSodaBody` function you can send a query to a SODA dataset and you'll get back a value of type `IO Response`. The `Response` type is a list of `Row`s, and a `Row` is an association list of `(String, ReturnValue)` tuples. You can easily retreive values from rows using functions like `lookup`, which is in the Haskell Prelude.
 
-The `ReturnValue` type is an abstract data type (ADT) which has a different constructor to hold each SODA datatype. For example, a `ReturnType` constructed by the `RPoint` constructor will have type `Point`. Due to a [known issue](#28) responses won't include values of SODA `Double` types. `SodaNum` and `Money` return just fine though.
+The `ReturnValue` type is an abstract data type (ADT) which has a different constructor to hold each SODA datatype. For example, a `ReturnType` constructed by the `RPoint` constructor will have type `Point`. Due to a [known issue](https://github.com/StevenWInfo/haskell-soda/issues/28) responses won't include values of SODA `Double` types. `SodaNum` and `Money` return just fine though.
 
 You can also use `getStringBody` to get the response from a SODA query call as a string, if you want to interpret it yourself, or need it in a particular response format.
 
@@ -109,13 +109,13 @@ If something goes wrong between the time the query is sent and received, it will
 
 ###Tips
 
-- Since it's somewhat annoying to put type declerations for `Column` values inline, I recommend defining constants for all of the columns that you are going to use in one batch, and then just using those throughout your code.
+- Since it's somewhat annoying to put type declarations for `Column` values inline, I recommend defining constants for all of the columns that you are going to use in one batch, and then just using those throughout your code.
 
 - To reduce some of the boilerplate, I recommend making some small functions that combine some of the constructors and other necessary parts. I didn't add these to the library because there could potentially be a lot of them, and it would have been a lot of memorization to use, but they are simple enough to make when they are needed. Similarly, for some of the longer names you can create some shorter constants or function names.
 
-- If you can, I actually recommend you *don't* use OverloadedStrings in the same file as queries are being built because sometimes the compiler gets confused with strings and this library.
+- I actually recommend you *don't* use OverloadedStrings in the same file as queries are being built because sometimes the compiler gets confused with strings and this library.
 
-- Never forget three of the most functions in functional programming: map, fold, and filter! If you'd like to do something like create a `MultiPoint` with tuples instead of points, or if you'd like a whole bunch of numbers to be `SodaNum`, then these three functions can make things much more simple and concise.
+- Never forget three of the most useful functions in functional programming: map, fold, and filter! If you'd like to do something like create a `MultiPoint` with tuples instead of points, or if you'd like a whole bunch of numbers to be `SodaNum`, then these three functions can make things much more simple and concise.
 
 ####Common mistakes
 
@@ -155,7 +155,7 @@ magRegSource = do theResponse <- getSodaResponse "soda.demo.socrata.com" "6yvf-k
           checkText _                = Nothing
 ```
 
-The next example is even more contrived, but it demonstrates how you can create complex queries reliably. In real applications you may combine many small and varying query elements that come from a myriad of different places in your code. Even though it may be difficult to track where all the different parts come from, and how they are combined, with this library you can still be confiedent that the result will create a well formed, type-enforced query. Some of the second query, in the example, even comes from information retrieved from the previous query, which is made simpler because the types retrieved from any responses are the same types that are used in the queries.
+The next example is even more contrived, but it demonstrates how you can create complex queries reliably. In real applications you may combine many small and varying query elements that come from a myriad of different places in your code. Even though it may be difficult to track where all the different parts come from, and how they are combined, with this library you can still be confident that the result will create a well formed, type-enforced query. Some of the second query, in the example, even comes from information retrieved from the previous query, which is made simpler because the types retrieved from any responses are the same types that are used in the queries.
 ```haskell
 complexQuery [Select] -> Int -> IO Response
 complexQuery inputSelect tolerance = do
