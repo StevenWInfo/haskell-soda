@@ -56,7 +56,6 @@ tests = testGroup "Soda Tests"
         let query1 = queryToParam $ emptyQuery { limit = Just 1 }
         response <- getStringBody testDomain testDataset testFormat query1
         response @?= result
-    -- I used show and strings because I think that I was having trouble making the types an instance of Eq.
     , testCase "Testing full API call" $ do
         theResponse <- getSodaResponse testDomain testDataset $ emptyQuery { filters = Just [ (Column "magnitude" :: Column SodaNum) $= (SodaVal $ SodaNum 1.6) ], limit = Just 1 }
         theResponse @?= [[("source",RSodaText "ak"),("region",RSodaText "36km W of Valdez, Alaska"),("number_of_stations",RSodaNum (SodaNum {getSodaNum = 6.0})),("magnitude",RSodaNum (SodaNum {getSodaNum = 1.6})),("earthquake_id",RSodaText "ak11243041"),("depth",RSodaNum (SodaNum {getSodaNum = 0.0}))]]
