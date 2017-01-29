@@ -15,6 +15,7 @@ module Soda
     ( ResponseFormat (..)
     , Domain
     , DatasetID
+    , AppToken
     , RawParameters
     , urlBuilder
     , getLbsResponse
@@ -75,7 +76,7 @@ instance MonadHttp IO where
 -- Todo: put a type declaration on this.
 -- Probably don't need to use do notation.
 -- |Gets the whole response. Misnamed right now because it is actually lazy byte strings, and it's returning a response data structure.
-getLbsResponse domain datasetID format appToken query = do
+getLbsResponse appToken domain datasetID format query = do
     let url = urlBuilder domain datasetID format
     let param = foldr1 (<>) $ map (\(x,y) -> (pack x) =: y) query
     let tokenHeader = maybe mempty (\x -> header (BS8.pack "X-App-Token") (BS8.pack x)) appToken
@@ -84,8 +85,8 @@ getLbsResponse domain datasetID format appToken query = do
 
 -- (should probably take just the Query type)
 -- |Gets the body of a response from a query given the Domain, DatasetID, ResponseFormat, and query parameters as a list of tuples.
-getStringBody :: Domain -> DatasetID -> ResponseFormat -> Maybe AppToken -> RawParameters -> IO String
-getStringBody domain datasetID format appToken query = (getLbsResponse domain datasetID format appToken query) >>= (return . L8.unpack . responseBody)
+getStringBody :: Maybe AppToken -> Domain -> DatasetID -> ResponseFormat -> RawParameters -> IO String
+getStringBody appToken domain datasetID format query = (getLbsResponse appToken domain datasetID format query) >>= (return . L8.unpack . responseBody)
 
 -- Possibly shouldn't export this, although I suppose exposing low level stuff could be useful if a user can't do something with the main functions.
 --urlBuilder :: Domain -> DatasetID -> ResponseFormat -> Url Https
@@ -122,9 +123,9 @@ type Row = [Field]
 type Response = [Row]
 
 -- |The main way to query information from the Socrata Open Data API. Give it a domain, datasetID, and Query, and it will give you a response interpreted in the established Haskell versions of SODA datatypes.
-getSodaResponse :: Domain -> DatasetID -> Maybe AppToken -> Query -> IO Response
-getSodaResponse domain datasetID appToken query = do
-    response <- getLbsResponse domain datasetID JSON appToken (queryToParam query)
+getSodaResponse :: Maybe AppToken -> Domain -> DatasetID -> Query -> IO Response
+getSodaResponse appToken domain datasetID query = do
+    response <- getLbsResponse appToken domain datasetID JSON (queryToParam query)
     let body = responseBody response
     let responseFields = getResponseFields response
     let responseTypes = getResponseTypes response
