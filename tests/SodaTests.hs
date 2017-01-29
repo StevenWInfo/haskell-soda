@@ -1,4 +1,3 @@
-
 module SodaTests
     ( tests
     ) where
@@ -11,6 +10,7 @@ import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.ByteString.Char8 as BS
 import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Types.Status as Status
+import Data.Text (pack)
 import Network.HTTP.Req
 import Control.Exception
 
@@ -38,20 +38,11 @@ tests = testGroup "Soda Tests"
                 False @? "Shouldn't have thrown exception"
             Right foo -> do
                 ((read (BS.unpack (fromJust $ responseHeader foo (BS.pack "X-Soda2-Types")))) :: [String]) @?= ["number","text","point","text","text","text","text","number","number","text","text","text"]
-    , testCase "Test 404 response" $ do
-        response <- try (getLbsResponse (tail testDomain) testDataset testFormat testQuery) :: IO (Either HttpException LbsResponse)
-        case response of
-            Left ex -> do 
-                          True @? "Threw exception" -- unnecessary
-            Right foo -> do
-                            False @? "Should have thrown exception"
-    , testCase "Test 404 response" $ do
-        response <- tryJust selectNotFound (getLbsResponse ((tail . tail) testDomain) testDataset testFormat testQuery)
-        case response of
-            Left code -> do 
-                            code @?= Status.status404
-            Right _ -> do
-                            False @? "Should have thrown exception"
+    , testCase "Testing the putting an application token in the request" $ do
+        let url = urlBuilder testDomain testDatasetID testFormat
+        let param = foldr1 (<>) $ map (\(x,y) -> (pack x) =: y) query
+        response <- req GET url NoReqBody returnRequest $ (header (BS.pack "X-App-Token") (BS.pack "APP_TOKEN")) <> param
+        response @?= "Foobar"
     , testCase "Testing call to dataset with query type" $ do
         let query1 = queryToParam $ emptyQuery { limit = Just 1 }
         response <- getStringBody testDomain testDataset testFormat query1
