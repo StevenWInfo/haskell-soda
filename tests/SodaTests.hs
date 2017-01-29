@@ -13,6 +13,7 @@ import qualified Network.HTTP.Types.Status as Status
 import Data.Text (pack)
 import Network.HTTP.Req
 import Control.Exception
+import Data.Monoid ((<>), Monoid)
 
 import Soda
 import Query
@@ -38,11 +39,18 @@ tests = testGroup "Soda Tests"
                 False @? "Shouldn't have thrown exception"
             Right foo -> do
                 ((read (BS.unpack (fromJust $ responseHeader foo (BS.pack "X-Soda2-Types")))) :: [String]) @?= ["number","text","point","text","text","text","text","number","number","text","text","text"]
+    {- Only passes if you have a file with an app token in it.
     , testCase "Testing the putting an application token in the request" $ do
-        let url = urlBuilder testDomain testDatasetID testFormat
-        let param = foldr1 (<>) $ map (\(x,y) -> (pack x) =: y) query
-        response <- req GET url NoReqBody returnRequest $ (header (BS.pack "X-App-Token") (BS.pack "APP_TOKEN")) <> param
-        response @?= "Foobar"
+        let query = emptyQuery { filters = Just [ (Column "category" :: Column SodaText) $= SodaVal "Fruit", (Column "item" :: Column SodaText) $= SodaVal "Peaches"]
+                               , limit = Just 3
+                               }
+        let url = urlBuilder testDomain testDataset testFormat
+        let param = foldr1 (<>) $ map (\(x,y) -> (pack x) =: y) (queryToParam query)
+        appTokenPre <- readFile "tests/data/app-token.txt"
+        let appToken = head $ lines appTokenPre
+        response <- req GET url NoReqBody returnRequest $ (header (BS.pack "X-App-Token") (BS.pack appToken)) <> param
+        show (responseRequest response) @?= "Request {\n  host                 = \"soda.demo.socrata.com\"\n  port                 = 443\n  secure               = True\n  requestHeaders       = [(\"X-App-Token\",\"" ++ appToken ++ "\")]\n  path                 = \"/resource/6yvf-kk3n.json\"\n  queryString          = \"?category=%27Fruit%27&item=%27Peaches%27&%24limit=3\"\n  method               = \"GET\"\n  proxy                = Nothing\n  rawBody              = False\n  redirectCount        = 10\n  responseTimeout      = ResponseTimeoutDefault\n  requestVersion       = HTTP/1.1\n}\n"
+    -}
     , testCase "Testing call to dataset with query type" $ do
         let query1 = queryToParam $ emptyQuery { limit = Just 1 }
         response <- getStringBody testDomain testDataset testFormat query1
