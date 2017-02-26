@@ -14,6 +14,8 @@ import Data.Text (pack)
 import Network.HTTP.Req
 import Control.Exception
 import Data.Monoid ((<>), Monoid)
+import Data.HashMap.Strict (fromList)
+import qualified Data.HashMap.Strict as HM
 
 import Soda
 import Query
@@ -45,7 +47,7 @@ tests = testGroup "Soda Tests"
         response @?= result
     , testCase "Testing full API call" $ do
         theResponse <- getSodaResponse Nothing testDomain testDataset $ emptyQuery { filters = Just [ (Column "magnitude" :: Column SodaNum) $= (SodaVal $ SodaNum 1.6) ], limit = Just 1 }
-        theResponse @?= [[("source",RSodaText "ak"),("region",RSodaText "36km W of Valdez, Alaska"),("number_of_stations",RSodaNum (SodaNum {getSodaNum = 6.0})),("magnitude",RSodaNum (SodaNum {getSodaNum = 1.6})),("earthquake_id",RSodaText "ak11243041"),("depth",RSodaNum (SodaNum {getSodaNum = 0.0}))]]
+        theResponse @?= map fromList [[("source",RSodaText "ak"),("region",RSodaText "36km W of Valdez, Alaska"),("number_of_stations",RSodaNum (SodaNum {getSodaNum = 6.0})),("magnitude",RSodaNum (SodaNum {getSodaNum = 1.6})),("earthquake_id",RSodaText "ak11243041"),("depth",RSodaNum (SodaNum {getSodaNum = 0.0}))]]
     {- Only passes if you have a file with an app token in it.
     , testCase "Testing application token functionality" $ do
         appToken <- ioAppToken
@@ -61,14 +63,14 @@ tests = testGroup "Soda Tests"
             emptyQuery { filters = Just [ (Column "category" :: Column SodaText) $= SodaVal "Fruit", (Column "item" :: Column SodaText) $= SodaVal "Peaches"]
                        , limit = Just 3
                        }
-        theResponse @?= [[("zipcode",RSodaText "06791"),("location_1_state",RSodaText "CT"),("location_1_location",RSodaText "16 Bogue Rd"),("location_1_city",RSodaText "Harwinton"),("location_1",RPoint (Point {longitude = -73.09627264999966, latitude = 41.77989387000048})),("l",RSodaNum (SodaNum {getSodaNum = 0.0})),("item",RSodaText "Peaches"),("farmer_id",RSodaNum (SodaNum {getSodaNum = 3402.0})),("category",RSodaText "Fruit"),("business",RSodaText "Francis Motuzick Jr")],[("zipcode",RSodaText "06759"),("phone1",RSodaText "860-361-6216"),("location_1_state",RSodaText "CT"),("location_1_location",RSodaText "403 Beach Street"),("location_1_city",RSodaText "Litchfield"),("location_1",RPoint (Point {longitude = -73.22418539499967, latitude = 41.7874849100005})),("l",RSodaNum (SodaNum {getSodaNum = 18.0})),("item",RSodaText "Peaches"),("farmer_id",RSodaNum (SodaNum {getSodaNum = 16352.0})),("farm_name",RSodaText "Morning Song Farms"),("category",RSodaText "Fruit"),("business",RSodaText "Morning Song Farms")],[("zipcode",RSodaText "06477"),("phone1",RSodaText "203-795-0571"),("location_1_state",RSodaText "CT"),("location_1_location",RSodaText "707 Derby Turnpike"),("location_1_city",RSodaText "Orange"),("location_1",RPoint (Point {longitude = -73.04627981099964, latitude = 41.31108858500045})),("l",RSodaNum (SodaNum {getSodaNum = 15.0})),("item",RSodaText "Peaches"),("farmer_id",RSodaNum (SodaNum {getSodaNum = 6640.0})),("farm_name",RSodaText "Field View Farm"),("category",RSodaText "Fruit"),("business",RSodaText "Field View Farm")]]
+        theResponse @?= map fromList [[("zipcode",RSodaText "06791"),("location_1_state",RSodaText "CT"),("location_1_location",RSodaText "16 Bogue Rd"),("location_1_city",RSodaText "Harwinton"),("location_1",RPoint (Point {longitude = -73.09627264999966, latitude = 41.77989387000048})),("l",RSodaNum (SodaNum {getSodaNum = 0.0})),("item",RSodaText "Peaches"),("farmer_id",RSodaNum (SodaNum {getSodaNum = 3402.0})),("category",RSodaText "Fruit"),("business",RSodaText "Francis Motuzick Jr")],[("zipcode",RSodaText "06759"),("phone1",RSodaText "860-361-6216"),("location_1_state",RSodaText "CT"),("location_1_location",RSodaText "403 Beach Street"),("location_1_city",RSodaText "Litchfield"),("location_1",RPoint (Point {longitude = -73.22418539499967, latitude = 41.7874849100005})),("l",RSodaNum (SodaNum {getSodaNum = 18.0})),("item",RSodaText "Peaches"),("farmer_id",RSodaNum (SodaNum {getSodaNum = 16352.0})),("farm_name",RSodaText "Morning Song Farms"),("category",RSodaText "Fruit"),("business",RSodaText "Morning Song Farms")],[("zipcode",RSodaText "06477"),("phone1",RSodaText "203-795-0571"),("location_1_state",RSodaText "CT"),("location_1_location",RSodaText "707 Derby Turnpike"),("location_1_city",RSodaText "Orange"),("location_1",RPoint (Point {longitude = -73.04627981099964, latitude = 41.31108858500045})),("l",RSodaNum (SodaNum {getSodaNum = 15.0})),("item",RSodaText "Peaches"),("farmer_id",RSodaNum (SodaNum {getSodaNum = 6640.0})),("farm_name",RSodaText "Field View Farm"),("category",RSodaText "Fruit"),("business",RSodaText "Field View Farm")]]
     , testCase "Testing a handful of SODA functions, operators, and values." $ do
         theResponse <- getSodaResponse Nothing testDomain testDataset $
             emptyQuery { selects = Just [ Select source, Alias location "place", Alias (Lower region) "area" ]
                        , limit = Just 3
                        , wheres = Just . Where $ number_of_stations $> sn 1.0 $&& IsNotNull number_of_stations $&& IsNotNull location $&& IsNotNull source $&& IsNotNull region
                        }
-        theResponse @?= [[("source",RSodaText "nn"),("place",RPoint (Point {longitude = -117.6778, latitude = 36.9447})),("area",RSodaText "northern california")],[("source",RSodaText "nn"),("place",RPoint (Point {longitude = -117.6903, latitude = 36.9417})),("area",RSodaText "central california")],[("source",RSodaText "pr"),("place",RPoint (Point {longitude = -64.0849, latitude = 19.7859})),("area",RSodaText "north of the virgin islands")]]
+        theResponse @?= map fromList [[("source",RSodaText "nn"),("place",RPoint (Point {longitude = -117.6778, latitude = 36.9447})),("area",RSodaText "northern california")],[("source",RSodaText "nn"),("place",RPoint (Point {longitude = -117.6903, latitude = 36.9417})),("area",RSodaText "central california")],[("source",RSodaText "pr"),("place",RPoint (Point {longitude = -64.0849, latitude = 19.7859})),("area",RSodaText "north of the virgin islands")]]
     -- I suppose I'm not really testing individual units in some of these "unit" tests.
     , testCase "Testing other SODA functions, operators, and values." $ do
         theResponse <- getSodaResponse Nothing testDomain testDataset $
@@ -79,7 +81,7 @@ tests = testGroup "Soda Tests"
                             $&& IsNotNull number_of_stations 
                              $&& WithinCircle location (sn 63) (sn (-147.0)) (sn 60000)
                        }
-        theResponse @?= [[("case_result",RSodaText "bar")],[("case_result",RSodaText "bar")],[("case_result",RSodaText "bar")]]
+        theResponse @?= map fromList [[("case_result",RSodaText "bar")],[("case_result",RSodaText "bar")],[("case_result",RSodaText "bar")]]
     , testCase "Testing out aggregate related functionality SODA functions, operators, and values." $ do
         theResponse <- getSodaResponse Nothing testDomain testDataset $
             emptyQuery { selects = Just [ Alias (Avg magnitude) "avg_mag" ]
@@ -87,7 +89,7 @@ tests = testGroup "Soda Tests"
                        , groups = Just [Group magnitude]
                        , having = Just . Having $ ((Column "avg_mag") :: Column SodaNum) $> sn 1.0-- Points out that aliases need to be improved.
                        }
-        theResponse @?= [[("avg_mag",RSodaNum (SodaNum {getSodaNum = 1.01}))],[("avg_mag",RSodaNum (SodaNum {getSodaNum = 1.02}))],[("avg_mag",RSodaNum (SodaNum {getSodaNum = 1.03}))]]
+        theResponse @?= map fromList [[("avg_mag",RSodaNum (SodaNum {getSodaNum = 1.01}))],[("avg_mag",RSodaNum (SodaNum {getSodaNum = 1.02}))],[("avg_mag",RSodaNum (SodaNum {getSodaNum = 1.03}))]]
     , testCase "One of the examples I'll have in the README" $ do
         theResponse <- getSodaResponse Nothing testDomain testDataset $
             emptyQuery { selects = Just [ Select magnitude, Alias (region $++ SodaVal " " $++ source) "region_and_source"]
@@ -99,18 +101,18 @@ tests = testGroup "Soda Tests"
                        , orders  = Just $ [Order magnitude ASC]
                        , limit   = Just 3
                        }
-        let mag = (safeHead theResponse >>= lookup "magnitude" >>= checkNum)
+        let mag = (safeHead theResponse >>= HM.lookup "magnitude" >>= checkNum)
         mag @?= Just 0.3
-        let regSource = (safeHead theResponse >>= lookup "region_and_source" >>= checkText)
+        let regSource = (safeHead theResponse >>= HM.lookup "region_and_source" >>= checkText)
         regSource @?= Just "82km E of Cantwell, Alaska ak"
         let stringMag = mag >>= (Just . (\mag -> mag ++ " magnitude ") . show)
         flip (@?=) "0.3 magnitude 82km E of Cantwell, Alaska ak" $ case ((++) <$> stringMag <*> regSource) of
             Nothing -> "Nothing here"
             Just x  -> x
-        let mags = map (\x -> lookup "magnitude" x >>= checkNum >>= (Just . (\mag -> mag ++ " magnitude ") . show)) theResponse
-        let regSources = map (\x -> lookup "region_and_source" x >>= checkText) theResponse
+        let mags = map (\x -> HM.lookup "magnitude" x >>= checkNum >>= (Just . (\mag -> mag ++ " magnitude ") . show)) theResponse
+        let regSources = map (\x -> HM.lookup "region_and_source" x >>= checkText) theResponse
         zipWith (\mag rs -> fromMaybe "Nothing here" $ (++) <$> mag <*> rs) mags regSources @?= ["0.3 magnitude 82km E of Cantwell, Alaska ak", "0.6 magnitude 64km E of Cantwell, Alaska ak", "0.8 magnitude 73km SSW of Delta Junction, Alaska ak"]
-        theResponse @?= [[("region_and_source",RSodaText "82km E of Cantwell, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.3}))],[("region_and_source",RSodaText "64km E of Cantwell, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.6}))],[("region_and_source",RSodaText "73km SSW of Delta Junction, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.8}))]]
+        theResponse @?= map fromList [[("region_and_source",RSodaText "82km E of Cantwell, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.3}))],[("region_and_source",RSodaText "64km E of Cantwell, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.6}))],[("region_and_source",RSodaText "73km SSW of Delta Junction, Alaska ak"),("magnitude",RSodaNum (SodaNum {getSodaNum = 0.8}))]]
     , testCase "Testing more complicated query creation" $ do
         firstResponse <- getSodaResponse Nothing testDomain testDataset $
             emptyQuery { selects = Just [ Select location, Select region]
@@ -118,7 +120,7 @@ tests = testGroup "Soda Tests"
                        , orders  = Just $ [ Order magnitude DESC ]
                        , limit   = Just 1
                        }
-        let maxLocation = safeHead firstResponse >>= lookup "location" >>= checkPoint
+        let maxLocation = safeHead firstResponse >>= HM.lookup "location" >>= checkPoint
         maxLocation @?= Just (Point {longitude = 144.8994, latitude = 6.5092})
         secondResponse <- case maxLocation of
             Nothing       -> return []
@@ -129,7 +131,7 @@ tests = testGroup "Soda Tests"
                                                 $|| WithinCircle (Column "the_geom" :: Column MultiPolygon) (sn $ latitude maxPoint) (sn $ longitude maxPoint) (sn $ 1000000)
                                            , limit   = Just 1
                                            }
-        secondResponse @?= [[("name",RSodaText "San Jose (Oleai)"),("geoid",RSodaText "6947205")]]
+        secondResponse @?= map fromList [[("name",RSodaText "San Jose (Oleai)"),("geoid",RSodaText "6947205")]]
     ]
     where
         testDomain  = "soda.demo.socrata.com"

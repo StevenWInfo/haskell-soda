@@ -21,7 +21,7 @@ module Soda
     , getLbsResponse
     , getStringBody
     , getSodaResponse
-    , Field
+    -- , Field
     , Row
     , Response
     , ReturnValue (..)
@@ -31,15 +31,17 @@ import System.IO
 import qualified Data.ByteString.Lazy.Char8 as L8
 import qualified Data.ByteString.Char8 as BS8
 import Data.List (foldl')
-import Data.Text (Text, pack, append)
+import Data.Text (Text, pack, append, unpack)
 import Data.Monoid ((<>), Monoid)
 import Data.Aeson
 import Data.Aeson.Types
 import qualified Data.Vector as V
 import qualified Data.HashMap.Strict as HM
 import Control.Exception
-import Control.Monad (foldM)
+import Control.Monad (mapM)
 import Network.HTTP.Req
+
+import Debug.Trace
 
 import Query
 import Datatypes
@@ -114,10 +116,11 @@ data ReturnValue = RCheckbox Checkbox
                 deriving (Show, Eq)
 
 -- |The type of the returned field information. The string on the left is the key and the ReturnValue on the right is the value for that field.
-type Field = (String, ReturnValue)
+--type Field = (String, ReturnValue)
 
 -- |The type of a row of returned data.
-type Row = [Field]
+--type Row = [Field]
+type Row = HM.HashMap String ReturnValue
 
 -- |The type of the response which is all of the rows.
 type Response = [Row]
@@ -129,7 +132,7 @@ getSodaResponse appToken domain datasetID query = do
     let body = responseBody response
     let responseFields = getResponseFields response
     let responseTypes = getResponseTypes response
-    let fieldInfo = zip responseFields responseTypes
+    let fieldInfo = HM.fromList $ zip responseFields responseTypes
     return $ parseResponse fieldInfo body
 
 -- Possibly throw an exception instead of empty?
@@ -148,13 +151,13 @@ getResponseFields response = case (responseHeader response "X-Soda2-Fields") of
 --- Parsing stuff. Possibly could use better names. Also need to handle errors better than just default values.
 
 -- |Given the information about all of the fields and the ByteString body, returns a response.
-parseResponse :: [(String, String)] -> L8.ByteString -> Response
+parseResponse :: HM.HashMap String String -> L8.ByteString -> Response
 parseResponse fieldInfo body = case parseMaybe mainParser =<< decode body of
     Just resp -> resp
     Nothing -> []
     where parseArray fInfo arr = mapM (parseRows fInfo) (V.toList arr)
           mainParser = withArray "Array of dataset rows" (parseArray fieldInfo)
-
+{-
 -- |Given the info for all fields, and the aeson object value for a row, parse the row into Haskell values.
 parseRows :: [(String, String)] -> Value -> Parser Row
 parseRows fieldInfo rowObj = withObject "Row" objToParser rowObj
@@ -165,22 +168,29 @@ parseField :: Value -> Row -> (String, String) -> Parser Row
 parseField (Object obj) accum ((key, fieldType)) = case HM.lookup (pack key) obj of
     Nothing  -> return accum
     Just val -> (:) <$> (fmap ((,) key) (parseReturnVal fieldType val)) <*> (pure accum)
-                   
+    -}
+
+-- |Given the info for all fields, and the aeson object value for a row, parse the row into Haskell values.
+parseRows :: HM.HashMap String String -> Value -> Parser Row
+parseRows fieldInfo rowObj = withObject "Row" objToParser rowObj
+    where objToParser o = sequence $ HM.mapWithKey (parseReturnVal (trace (show o) o)) fieldInfo
 
 -- There's probably a simpler and terser way to do this.
+-- This seems a little backwards but until I straighten out string types, I think this is the simplest way.
 -- |Uses the type information included in the header of the response to tell parseJSON what types to parse the JSON into.
-parseReturnVal :: String -> Value -> Parser ReturnValue
-parseReturnVal fieldType val = case fieldType of
-    "checkbox"     -> fmap RCheckbox ((parseJSON val) :: Parser Checkbox)
-    "money"        -> fmap RMoney ((parseJSON val) :: Parser Money)
-    "double"       -> fail "Doubles don't work yet because of the format that SODA returns them in." -- fmap RDouble ((parseJSON val) :: Parser Double)
-    "number"       -> fmap RSodaNum ((parseJSON val) :: Parser SodaNum)
-    "text"         -> fmap RSodaText ((parseJSON val) :: Parser SodaText)
-    "timestamp"    -> fmap RTimestamp ((parseJSON val) :: Parser Timestamp)
-    "point"        -> fmap RPoint ((parseJSON val) :: Parser Point)
-    "multipoint"   -> fmap RMultiPoint ((parseJSON val) :: Parser MultiPoint)
-    "location"     -> fail "Not sure how to parse location types" -- fmap RLocation ((parseJSON val) :: Parser Location)
-    "line"         -> fmap RLine ((parseJSON val) :: Parser Line)
-    "multiline"    -> fmap RMultiLine ((parseJSON val) :: Parser MultiLine)
-    "polygon"      -> fmap RPolygon ((parseJSON val) :: Parser Polygon)
-    "multipolygon" -> fmap RMultiPolygon ((parseJSON val) :: Parser MultiPolygon)
+parseReturnVal :: HM.HashMap Text Value -> String -> String -> Parser ReturnValue
+parseReturnVal row fieldName sodaType = maybe (trace "problem" (fail "Not given the type by the response")) parseConfirmedVal (HM.lookup (pack fieldName) row)
+    where parseConfirmedVal val = case sodaType of
+            "checkbox"     -> fmap RCheckbox ((parseJSON val) :: Parser Checkbox)
+            "money"        -> fmap RMoney ((parseJSON val) :: Parser Money)
+            "double"       -> fail "Doubles can't be interpreted yet." -- fmap RDouble ((parseJSON val) :: Parser Double)
+            "number"       -> fmap RSodaNum ((parseJSON val) :: Parser SodaNum)
+            "text"         -> fmap RSodaText ((parseJSON val) :: Parser SodaText)
+            "timestamp"    -> fmap RTimestamp ((parseJSON val) :: Parser Timestamp)
+            "point"        -> fmap RPoint ((parseJSON val) :: Parser Point)
+            "multipoint"   -> fmap RMultiPoint ((parseJSON val) :: Parser MultiPoint)
+            "location"     -> fail "Not sure how to parse location types." -- fmap RLocation ((parseJSON val) :: Parser Location)
+            "line"         -> fmap RLine ((parseJSON val) :: Parser Line)
+            "multiline"    -> fmap RMultiLine ((parseJSON val) :: Parser MultiLine)
+            "polygon"      -> fmap RPolygon ((parseJSON val) :: Parser Polygon)
+            "multipolygon" -> fmap RMultiPolygon ((parseJSON val) :: Parser MultiPolygon)
