@@ -25,4 +25,4 @@ response = getSodaResponse Nothing "data.ct.gov" "y6p2-px98" $
 
 ##Documentation
 
-The documentation for the library is located in the [docs directory](docs/doc.md). You can also view the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0) for more info. The official documentation for the API itself is located at the [Socrata website](https://dev.socrata.com/).
+The documentation for the library is located in the [docs directory](docs/doc.md). You can also view the [Haddock documentation](http://stevenw.info/haskell-soda/unreleased) for more info. The official documentation for the API itself is located at the [Socrata website](https://dev.socrata.com/).
