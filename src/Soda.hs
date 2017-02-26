@@ -39,6 +39,7 @@ import qualified Data.HashMap.Strict as HM
 import Control.Exception
 import Control.Monad (foldM)
 import Network.HTTP.Req
+import Data.Maybe
 
 import Query
 import Datatypes
@@ -123,31 +124,22 @@ getSodaResponse :: Maybe AppToken -> Domain -> DatasetID -> Query -> IO Response
 getSodaResponse appToken domain datasetID query = do
     response <- getLbsResponse appToken domain datasetID JSON (queryToParam query)
     let body = responseBody response
-    let responseFields = getResponseFields response
-    let responseTypes = getResponseTypes response
+    let responseFields = getHeader response "X-Soda2-Types"
+    let responseTypes = getHeader response "X-Soda2-Fields"
     let fieldInfo = zip responseFields responseTypes
     return $ parseResponse fieldInfo body
 
 -- Possibly throw an exception instead of empty?
--- getResponseTypes :: ? -> [String]
+-- getResponseTypes :: String -> ? -> [String]
 -- |Gets the types of the fields which SODA conveniently includes in the header of its response.
-getResponseTypes response = case (responseHeader response "X-Soda2-Types") of
-    Just header -> (read (BS8.unpack (header))) :: [String]
-    Nothing -> []
-    
--- getResponseFields :: ? -> [String]
--- |Gets the names of the fields included in the response.
-getResponseFields response = case (responseHeader response "X-Soda2-Fields") of
-    Just header -> (read (BS8.unpack (header))) :: [String]
-    Nothing -> []
+getHeader response fieldName = maybe [] extractHeader $ responseHeader response fieldName
+    where extractHeader header = read (BS8.unpack (header)) :: [String]
 
 --- Parsing stuff. Possibly could use better names. Also need to handle errors better than just default values.
 
 -- |Given the information about all of the fields and the ByteString body, returns a response.
 parseResponse :: [(String, String)] -> L8.ByteString -> Response
-parseResponse fieldInfo body = case parseMaybe mainParser =<< decode body of
-    Just resp -> resp
-    Nothing -> []
+parseResponse fieldInfo body = fromMaybe [] (parseMaybe mainParser =<< decode body)
     where parseArray fInfo arr = mapM (parseRows fInfo) (V.toList arr)
           mainParser = withArray "Array of dataset rows" (parseArray fieldInfo)
 
@@ -158,11 +150,9 @@ parseRows fieldInfo rowObj = withObject "Row" objToParser rowObj
     
 -- |Folding function which, given the aeson object value for a row, a potentially partially parsed row, and the metadata information for a field, returns the parsed row with the newly parsed field added to it.
 parseField :: Value -> Row -> (String, String) -> Parser Row
-parseField (Object obj) accum ((key, fieldType)) = case HM.lookup (pack key) obj of
-    Nothing  -> return accum
-    Just val -> HM.insert key <$> parseReturnVal fieldType val <*> pure accum
+parseField (Object obj) accum (key, fieldType) = maybe (return accum) parseAndInsert $ HM.lookup (pack key) obj
+    where parseAndInsert val = HM.insert key <$> parseReturnVal fieldType val <*> pure accum
                    
-
 -- There's probably a simpler and terser way to do this.
 -- |Uses the type information included in the header of the response to tell parseJSON what types to parse the JSON into.
 parseReturnVal :: String -> Value -> Parser ReturnValue
