@@ -77,8 +77,8 @@ instance MonadHttp IO where
 -- Probably don't need to use do notation.
 -- |Gets the whole response. Misnamed right now because it is actually lazy byte strings, and it's returning a response data structure.
 getLbsResponse appToken domain datasetID format query = do
-    let url = urlBuilder domain datasetID format
-    let param = foldr1 (<>) $ map (\(x,y) -> (pack x) =: y) query
+    let url         = urlBuilder domain datasetID format
+    let param       = foldr1 (<>) $ map (\(x,y) -> (pack x) =: y) query
     let tokenHeader = maybe mempty (\x -> header (BS8.pack "X-App-Token") (BS8.pack x)) appToken
     response <- req GET url NoReqBody lbsResponse (tokenHeader <> param)
     return response
@@ -92,11 +92,11 @@ getStringBody appToken domain datasetID format query = (getLbsResponse appToken 
 --urlBuilder :: Domain -> DatasetID -> ResponseFormat -> Url Https
 -- |Builds the non-parameter part of the URL out of the Domain, DatasetID, and ResponseFormat.
 urlBuilder domain datasetID format = https domain' /: "resource" /: (datasetID' `append` "." `append` format')
-    where domain' = pack domain
+    where domain'    = pack domain
           datasetID' = pack datasetID
-          format' = pack (formatToUrl format)
+          format'    = pack (formatToUrl format)
 
--- Change name.
+-- TODO Improve name.
 -- |The type to allow you to determine what type the field is being returned as.
 data ReturnValue = RCheckbox Checkbox
                 | RMoney Money
@@ -123,10 +123,10 @@ type Response = [Row]
 getSodaResponse :: Maybe AppToken -> Domain -> DatasetID -> Query -> IO Response
 getSodaResponse appToken domain datasetID query = do
     response <- getLbsResponse appToken domain datasetID JSON (queryToParam query)
-    let body = responseBody response
+    let body           = responseBody response
     let responseFields = getHeader response "X-Soda2-Fields"
-    let responseTypes = getHeader response "X-Soda2-Types"
-    let fieldInfo = zip responseFields responseTypes
+    let responseTypes  = getHeader response "X-Soda2-Types"
+    let fieldInfo      = zip responseFields responseTypes
     return $ parseResponse fieldInfo body
 
 -- Possibly throw an exception instead of empty?
@@ -143,11 +143,13 @@ parseResponse fieldInfo body = fromMaybe [] (parseMaybe mainParser =<< decode bo
     where parseArray fInfo arr = mapM (parseRows fInfo) (V.toList arr)
           mainParser = withArray "Array of dataset rows" (parseArray fieldInfo)
 
+-- If we didn't ignore bad lookups we could use sequence and map, have fieldInfo be a map, and get rid of parseField.
 -- |Given the info for all fields, and the aeson object value for a row, parse the row into Haskell values.
 parseRows :: [(String, String)] -> Value -> Parser Row
 parseRows fieldInfo rowObj = withObject "Row" objToParser rowObj
     where objToParser o = foldM (parseField rowObj) HM.empty fieldInfo
     
+-- Should probably handle bad lookups better.
 -- |Folding function which, given the aeson object value for a row, a potentially partially parsed row, and the metadata information for a field, returns the parsed row with the newly parsed field added to it.
 parseField :: Value -> Row -> (String, String) -> Parser Row
 parseField (Object obj) accum (key, fieldType) = maybe (return accum) parseAndInsert $ HM.lookup (pack key) obj
@@ -156,17 +158,17 @@ parseField (Object obj) accum (key, fieldType) = maybe (return accum) parseAndIn
 -- There's probably a simpler and terser way to do this.
 -- |Uses the type information included in the header of the response to tell parseJSON what types to parse the JSON into.
 parseReturnVal :: String -> Value -> Parser ReturnValue
-parseReturnVal fieldType val = case fieldType of
-    "checkbox"     -> fmap RCheckbox ((parseJSON val) :: Parser Checkbox)
-    "money"        -> fmap RMoney ((parseJSON val) :: Parser Money)
-    "double"       -> fail "Doubles don't work yet because of the format that SODA returns them in." -- fmap RDouble ((parseJSON val) :: Parser Double)
-    "number"       -> fmap RSodaNum ((parseJSON val) :: Parser SodaNum)
-    "text"         -> fmap RSodaText ((parseJSON val) :: Parser SodaText)
-    "timestamp"    -> fmap RTimestamp ((parseJSON val) :: Parser Timestamp)
-    "point"        -> fmap RPoint ((parseJSON val) :: Parser Point)
-    "multipoint"   -> fmap RMultiPoint ((parseJSON val) :: Parser MultiPoint)
-    "location"     -> fail "Not sure how to parse location types" -- fmap RLocation ((parseJSON val) :: Parser Location)
-    "line"         -> fmap RLine ((parseJSON val) :: Parser Line)
-    "multiline"    -> fmap RMultiLine ((parseJSON val) :: Parser MultiLine)
-    "polygon"      -> fmap RPolygon ((parseJSON val) :: Parser Polygon)
-    "multipolygon" -> fmap RMultiPolygon ((parseJSON val) :: Parser MultiPolygon)
+parseReturnVal "checkbox"     val = fmap RCheckbox ((parseJSON val) :: Parser Checkbox)
+parseReturnVal "money"        val = fmap RMoney ((parseJSON val) :: Parser Money)
+parseReturnVal "double"       val = fail "Doubles don't work yet because of the format that SODA returns them in." -- fmap RDouble ((parseJSON val) :: Parser Double)
+parseReturnVal "number"       val = fmap RSodaNum ((parseJSON val) :: Parser SodaNum)
+parseReturnVal "text"         val = fmap RSodaText ((parseJSON val) :: Parser SodaText)
+parseReturnVal "timestamp"    val = fmap RTimestamp ((parseJSON val) :: Parser Timestamp)
+parseReturnVal "point"        val = fmap RPoint ((parseJSON val) :: Parser Point)
+parseReturnVal "multipoint"   val = fmap RMultiPoint ((parseJSON val) :: Parser MultiPoint)
+parseReturnVal "location"     val = fail "Not sure how to parse location types" -- fmap RLocation ((parseJSON val) :: Parser Location)
+parseReturnVal "line"         val = fmap RLine ((parseJSON val) :: Parser Line)
+parseReturnVal "multiline"    val = fmap RMultiLine ((parseJSON val) :: Parser MultiLine)
+parseReturnVal "polygon"      val = fmap RPolygon ((parseJSON val) :: Parser Polygon)
+parseReturnVal "multipolygon" val = fmap RMultiPolygon ((parseJSON val) :: Parser MultiPolygon)
+parseReturnVal _              val = fail "Unrecognized type given in type header."
