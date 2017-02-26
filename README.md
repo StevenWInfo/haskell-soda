@@ -19,7 +19,7 @@ The following is a short example of a SODA call for the URL `https://data.ct.gov
 category = Column "category" :: Column SodaText
 item     = Column "item"     :: Column SodaText
 
-response = getSodaResponse "data.ct.gov" "y6p2-px98" $
+response = getSodaResponse Nothing "data.ct.gov" "y6p2-px98" $
     emptyQuery { filters = Just [ category $= SodaVal "Fruit", item $= SodaVal "Peaches"] }
 ```
 

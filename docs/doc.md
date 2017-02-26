@@ -14,7 +14,7 @@ You can find the official documentation for the API itself at the [Socrata websi
 
 Besides the overview given below, you can also look at the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0) for a more detailed description of the different parts of the library. For those of you very familiar with Haskell, Haddock documentation, and especially GADTs, you can probably go directly there and be able to pick it up pretty quickly. For those that are less familiar with any of those things, reading the following documentation alongside the Haddock documentation will probably be helpful. I'll also be doing some "hand-waving" in the following explanations which might make them less accurate, but easier to intuitively understand.
 
-To summarize, the main way to make a call to SODA is by giving a domain string, dataset ID string, and a `Query` to `getSodaResponse`. To create the query you will construct the different clauses of a query using the different, typed SODA elements. From `getSodaResponse` you'll get back a value of type `Response` which holds values already interpreted into the same Haskell versions of the SODA types which are also used in queries.
+To summarize, the main way to make a call to SODA is by using the `getSodaResponse` function with a possible Application Token, a domain string, a dataset ID string, and a `Query`. To create the query you will construct the different clauses of a query using the different, typed SODA elements. From `getSodaResponse` you'll get back a value of type `Response` which holds values already interpreted into the same Haskell versions of the SODA types which are also used in queries.
 
 ##Query Structure
 
@@ -107,7 +107,7 @@ The following example is a bit contrived but it queries a dataset with the URL `
 
 It then handles the response to concatenate the magnitude and the `region_and_source` together for all returned rows to get a Haskell list. At the time of writing this, this gives you the following list: `["0.3 magnitude 82km E of Cantwell, Alaska ak", "0.6 magnitude 64km E of Cantwell, Alaska ak", "0.8 magnitude 73km SSW of Delta Junction, Alaska ak"]`
 ```haskell
-magRegSource = do theResponse <- getSodaResponse "soda.demo.socrata.com" "6yvf-kk3n" $
+magRegSource = do theResponse <- getSodaResponse Nothing "soda.demo.socrata.com" "6yvf-kk3n" $
     -- Query
     emptyQuery { selects = Just [ Select magnitude, Alias (region $++ SodaVal " " $++ source) "region_and_source"]
                , wheres  = Just . Where $
@@ -133,7 +133,7 @@ The next example is even more contrived, but it demonstrates how you can create 
 ```haskell
 complexQuery [Select] -> Int -> IO Response
 complexQuery inputSelect tolerance = do
-    firstResponse <- getSodaResponse testDomain  testDataset $
+    firstResponse <- getSodaResponse Nothing testDomain testDataset $
         emptyQuery { selects = Just [ Select location ]
                    , wheres  = Just . Where $ IsNotNull location $&& IsNotNull magnitude
                    , orders  = Just $ [ Order magnitude DESC ]
@@ -144,7 +144,7 @@ complexQuery inputSelect tolerance = do
     
     secondResponse <- case maxLocation of
         Nothing       -> return []
-        Just maxPoint -> getSodaResponse "odn.data.socrata.com"  "h7w8-g2pa" $
+        Just maxPoint -> getSodaResponse Nothing "odn.data.socrata.com" "h7w8-g2pa" $
                             emptyQuery { selects = Just $ (Select geoid) : inputSelect 
                                        , wheres  = Just . Where $
                                             Intersects the_geom (SodaVal maxPoint)

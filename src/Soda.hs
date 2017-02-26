@@ -15,6 +15,7 @@ module Soda
     ( ResponseFormat (..)
     , Domain
     , DatasetID
+    , AppToken
     , RawParameters
     , urlBuilder
     , getLbsResponse
@@ -48,11 +49,14 @@ import Datatypes
 type RawParameters = [(String, String)]
 
 -- |Specifies what the domain of a request URL should be.
-type Domain        = String
+type Domain = String
 
 -- Maybe just call it Dataset?
 -- |Used for specifying the ID of the dataset that you want to query.
-type DatasetID     = String
+type DatasetID = String
+
+-- |Type for representing the application token. You can find out more about application tokens at the SODA documentation for <https://dev.socrata.com/docs/app-tokens.html application tokens>
+type AppToken = String
 
 -- Have this affect the mime type?
 -- |The type which specifies in the request, the format of the response.
@@ -71,18 +75,18 @@ instance MonadHttp IO where
 
 -- Todo: put a type declaration on this.
 -- Probably don't need to use do notation.
--- getLbsResponse :: Domain -> DatasetID -> ResponseFormat -> RawParameters -> IO String
 -- |Gets the whole response. Misnamed right now because it is actually lazy byte strings, and it's returning a response data structure.
-getLbsResponse domain datasetID format query = do
+getLbsResponse appToken domain datasetID format query = do
     let url = urlBuilder domain datasetID format
     let param = foldr1 (<>) $ map (\(x,y) -> (pack x) =: y) query
-    response <- req GET url NoReqBody lbsResponse param
+    let tokenHeader = maybe mempty (\x -> header (BS8.pack "X-App-Token") (BS8.pack x)) appToken
+    response <- req GET url NoReqBody lbsResponse (tokenHeader <> param)
     return response
 
 -- (should probably take just the Query type)
 -- |Gets the body of a response from a query given the Domain, DatasetID, ResponseFormat, and query parameters as a list of tuples.
-getStringBody :: Domain -> DatasetID -> ResponseFormat -> RawParameters -> IO String
-getStringBody domain datasetID format query = (getLbsResponse domain datasetID format query) >>= (return . L8.unpack . responseBody)
+getStringBody :: Maybe AppToken -> Domain -> DatasetID -> ResponseFormat -> RawParameters -> IO String
+getStringBody appToken domain datasetID format query = (getLbsResponse appToken domain datasetID format query) >>= (return . L8.unpack . responseBody)
 
 -- Possibly shouldn't export this, although I suppose exposing low level stuff could be useful if a user can't do something with the main functions.
 --urlBuilder :: Domain -> DatasetID -> ResponseFormat -> Url Https
@@ -119,9 +123,9 @@ type Row = [Field]
 type Response = [Row]
 
 -- |The main way to query information from the Socrata Open Data API. Give it a domain, datasetID, and Query, and it will give you a response interpreted in the established Haskell versions of SODA datatypes.
-getSodaResponse :: Domain -> DatasetID -> Query -> IO Response
-getSodaResponse domain datasetID query = do
-    response <- getLbsResponse domain datasetID JSON (queryToParam query)
+getSodaResponse :: Maybe AppToken -> Domain -> DatasetID -> Query -> IO Response
+getSodaResponse appToken domain datasetID query = do
+    response <- getLbsResponse appToken domain datasetID JSON (queryToParam query)
     let body = responseBody response
     let responseFields = getResponseFields response
     let responseTypes = getResponseTypes response
