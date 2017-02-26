@@ -73,7 +73,7 @@ The outer type gives you and the compiler the information of whether it's a valu
 
 ##SODA Responses
 
-Using the `getSodaBody` function you can send a query to a SODA dataset and get an `IO` response back which has already been interpreted into the Haskell datatypes that that corresponds to the different SODA types. Using the `getSodaBody` function you can send a query to a SODA dataset and you'll get back a value of type `IO Response`. The `Response` type is a list of `Row`s, and a `Row` is an association list of `(String, ReturnValue)` tuples. You can easily retreive values from rows using functions like `lookup`, which is in the Haskell Prelude.
+Using the `getSodaBody` function you can send a query to a SODA dataset and get an `IO` response back which has already been interpreted into the Haskell datatypes that that corresponds to the different SODA types. Using the `getSodaBody` function you can send a query to a SODA dataset and you'll get back a value of type `IO Response`. The `Response` type is a list of `Row`s, and a `Row` is a [(Strict) HashMap](https://hackage.haskell.org/package/unordered-containers-0.2.7.2/docs/Data-HashMap-Strict.html) of `Strings` as keys and `ReturnValue` as values.
 
 The `ReturnValue` type is an abstract data type (ADT) which has a different constructor to hold each SODA datatype. For example, a `ReturnType` constructed by the `RPoint` constructor will have type `Point`. Due to a [known issue](https://github.com/StevenWInfo/haskell-soda/issues/28) responses won't include values of SODA `Double` types. `SodaNum` and `Money` return just fine though.
 
@@ -107,6 +107,8 @@ The following example is a bit contrived but it queries a dataset with the URL `
 
 It then handles the response to concatenate the magnitude and the `region_and_source` together for all returned rows to get a Haskell list. At the time of writing this, this gives you the following list: `["0.3 magnitude 82km E of Cantwell, Alaska ak", "0.6 magnitude 64km E of Cantwell, Alaska ak", "0.8 magnitude 73km SSW of Delta Junction, Alaska ak"]`
 ```haskell
+import qualified Data.HashMap.Strict as HM
+
 magRegSource = do theResponse <- getSodaResponse Nothing "soda.demo.socrata.com" "6yvf-kk3n" $
     -- Query
     emptyQuery { selects = Just [ Select magnitude, Alias (region $++ SodaVal " " $++ source) "region_and_source"]
@@ -120,8 +122,8 @@ magRegSource = do theResponse <- getSodaResponse Nothing "soda.demo.socrata.com"
                }
                
      -- Response interpretation
-    let mags = map (\x -> lookup "magnitude" x >>= checkNum >>= (Just . (\mag -> mag ++ " magnitude ") . show)) theResponse
-    let regSources = map (\x -> lookup "region_and_source" x >>= checkText) theResponse
+    let mags = map (\x -> HM.lookup "magnitude" x >>= checkNum >>= (Just . (\mag -> mag ++ " magnitude ") . show)) theResponse
+    let regSources = map (\x -> HM.lookup "region_and_source" x >>= checkText) theResponse
     return $ zipWith (\mag rs -> fromMaybe "Problem extracting" $ (++) <$> mag <*> rs) mags regSources
     where checkNum (RSodaNum num)    = Just (getSodaNum num)
           checkNum _                 = Nothing
@@ -131,6 +133,8 @@ magRegSource = do theResponse <- getSodaResponse Nothing "soda.demo.socrata.com"
 
 The next example is even more contrived, but it demonstrates how you can create complex queries reliably. In real applications you may combine many small and varying query elements that come from a myriad of different places in your code. Even though it may be difficult to track where all the different parts come from, and how they are combined, with this library you can still be confident that the result will create a well formed, type-enforced query. Some of the second query, in the example, even comes from information retrieved from the previous query, which is made simpler because the types retrieved from any responses are the same types that are used in the queries.
 ```haskell
+import qualified Data.HashMap.Strict as HM
+
 complexQuery [Select] -> Int -> IO Response
 complexQuery inputSelect tolerance = do
     firstResponse <- getSodaResponse Nothing testDomain testDataset $
@@ -140,7 +144,7 @@ complexQuery inputSelect tolerance = do
                    , limit   = Just 1
                    }
                    
-    let maxLocation = safeHead firstResponse >>= lookup "location" >>= checkPoint
+    let maxLocation = safeHead firstResponse >>= HM.lookup "location" >>= checkPoint
     
     secondResponse <- case maxLocation of
         Nothing       -> return []
