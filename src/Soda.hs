@@ -124,8 +124,8 @@ getSodaResponse :: Maybe AppToken -> Domain -> DatasetID -> Query -> IO Response
 getSodaResponse appToken domain datasetID query = do
     response <- getLbsResponse appToken domain datasetID JSON (queryToParam query)
     let body = responseBody response
-    let responseFields = getHeader response "X-Soda2-Types"
-    let responseTypes = getHeader response "X-Soda2-Fields"
+    let responseFields = getHeader response "X-Soda2-Fields"
+    let responseTypes = getHeader response "X-Soda2-Types"
     let fieldInfo = zip responseFields responseTypes
     return $ parseResponse fieldInfo body
 
