@@ -12,7 +12,7 @@
 
 You can find the official documentation for the API itself at the [Socrata website](https://dev.socrata.com/).
 
-Besides the overview given below, you can also look at the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0) for a more detailed description of the different parts of the library. For those of you very familiar with Haskell, Haddock documentation, and especially GADTs, you can probably go directly there and be able to pick it up pretty quickly. For those that are less familiar with any of those things, reading the following documentation alongside the Haddock documentation will probably be helpful. I'll also be doing some "hand-waving" in the following explanations which might make them less accurate, but easier to intuitively understand.
+Besides the overview given below, you can also look at the [Haddock documentation](http://stevenw.info/haskell-soda/0.1.0.0) for a more detailed description of the different parts of the library. For those of you very familiar with Haskell, Haddock documentation, and especially GADTs, you can probably go directly there and be able to pick it up pretty quickly. For those that are less familiar with any of those things, reading the following documentation alongside the Haddock documentation will probably be helpful. I'll also be doing some "hand-waving" in the following explanations which might make them less accurate, but easier to intuitively understand. Despite the length and presentation of the documentation, the library isn't too difficult to use. I just need to learn to be more concise and give clearer explanations.
 
 To summarize, the main way to make a call to SODA is by using the `getSodaResponse` function with a possible Application Token, a domain string, a dataset ID string, and a `Query`. To create the query you will construct the different clauses of a query using the different, typed SODA elements. From `getSodaResponse` you'll get back a value of type `Response` which holds values already interpreted into the same Haskell versions of the SODA types which are also used in queries.
 
@@ -46,13 +46,13 @@ Some examples of SODA elements and how they would appear in the parameters of a 
 -- 58
 walkableDistance = SodaVal (SodaNum 58) :: SodaVal SodaNum
 
-sn = SodaVal . SodaNum    :: Double -> SodaVal SodaNum
+sn = SodaVal . SodaNum :: Double -> SodaVal SodaNum
 
 -- 3
-multiplier = sn 3                 :: SodaVal SodaNum
+multiplier = sn 3 :: SodaVal SodaNum
 
 -- station
-station = Column "station"     :: Column Point
+station = Column "station" :: Column Point
 
 -- distance_in_meters(station, 'POINT 45.3 87.2')
 stationDistance  = Distance station (SodaVal (Point 45.3 87.2)) :: SodaFunc SodaNum
