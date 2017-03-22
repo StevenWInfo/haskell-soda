@@ -1,8 +1,8 @@
-#haskell-soda
+# haskell-soda
 
 This library provides Haskell bindings for the [Socrata Open Data API](https://dev.socrata.com/) (SODA).
 
-##Introduction
+## Introduction
 
 *Disclaimer: This is not an official library from Socrata. There currently aren't any official Haskell bindings for SODA (or any other unofficial ones that I'm aware of), but if you want to use the official bindings for another programming language, you can find a list of them at the SODA documentation page for [Libraries & SDKs](https://dev.socrata.com/libraries/).*
 
@@ -23,6 +23,6 @@ response = getSodaResponse Nothing "data.ct.gov" "y6p2-px98" $
     emptyQuery { filters = Just [ category $= SodaVal "Fruit", item $= SodaVal "Peaches"] }
 ```
 
-##Documentation
+## Documentation
 
 The documentation for the library is located in the [docs directory](docs/doc.md). You can also view the [Haddock documentation](http://stevenw.info/haskell-soda/unreleased) for more info. The official documentation for the API itself is located at the [Socrata website](https://dev.socrata.com/).

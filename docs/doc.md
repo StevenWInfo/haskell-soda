@@ -1,4 +1,4 @@
-#Table of Contents
+# Table of Contents
 
 - [Query Structure](#query-structure)
 - [Query Elements](#query-elements)
@@ -8,7 +8,7 @@
     - [Common Mistakes](#common-mistakes)
 - [More Examples](#more-examples)
 
-#Documentation
+# Documentation
 
 You can find the official documentation for the API itself at the [Socrata website](https://dev.socrata.com/).
 
@@ -16,7 +16,7 @@ Besides the overview given below, you can also look at the [Haddock documentatio
 
 To summarize, the main way to make a call to SODA is by using the `getSodaResponse` function with a possible Application Token, a domain string, a dataset ID string, and a `Query`. To create the query you will construct the different clauses of a query using the different, typed SODA elements. From `getSodaResponse` you'll get back a value of type `Response` which holds values already interpreted into the same Haskell versions of the SODA types which are also used in queries.
 
-##Query Structure
+## Query Structure
 
 The main part of the query is specified using a value of the [`Query`](http://stevenw.info/haskell-soda/unreleased/Query.html#g:2) type. `Query` is just a record type where every field corresponds to one of the [SoQL Clauses](https://dev.socrata.com/docs/queries/), with the addition of a field for creating simple filters. Due to some name clashes with other functions in Haskell, the field accessor names differ a little, and the actual names are listed in the Haddock documentation for [Query](http://stevenw.info/haskell-soda/unreleased/Query.html). The Haddock documentation also details the overall structure of the Query type. Each field is also a Maybe type to indicate whether any particular clause is even contained in a query. *Note*: the subquery field doesn't actually do anything yet because implementing subqueries will take a little more work which hasn't been done yet.
 
@@ -24,7 +24,7 @@ To construct a query, I recommend starting with the `emptyQuery` value, which ha
 
 Some of the clauses have some special types of their own which you can learn about how those types are constructed over at the [Query Clauses](http:/stevenw.info/haskell-soda/unreleased/Query.html#g:1) section of the Haddock documentation.
 
-##Query Elements
+## Query Elements
 
 There are three kinds of elements in a SODA query:
 
@@ -63,7 +63,7 @@ isWalkable       = Between (stationDistance $* multiplier) (sn 7) (walkableDista
 
 The outer type gives you and the compiler the information of whether it's a value, column, or function/expression, and the inner type provides information about what the SODA datatype that the given query part will eventually produce. *Note*: While the values and SodaFunctions are usually able to infer their datatype from the value given to the data constructor, Column needs to have its type declared explicitly because there's nothing in the value given to indicate what type it should be.
 
-###A Few Extra Notes
+### A Few Extra Notes
 
 - The SODA datatypes are also grouped into smaller subsets represented by [several typeclasses](http://stevenw.info/haskell-soda/unreleased/Datatypes.html#g:1). This is to put some constraints on the input element types for some SODA functions. For example, the first parameter of `within_circle(...)` should be geometric types like `Point`, or `Polygon`, but not something like `Text`. Consequently, the corresponding Haskell function `WithinCircle` has the `SodaGeo` typeclass constraint on the first parameter, which only have instances for the geometric SODA datatypes.
 
@@ -71,7 +71,7 @@ The outer type gives you and the compiler the information of whether it's a valu
 
 - All of the SODA operators can be constructed with defined operators which are all prefixed with (`$`). Due to some restrictions, some operators such as `AND` had to be changed slightly, so check the [Haddock documentation](http://stevenw.info/haskell-soda/unreleased/SodaFunctions.html#g:1) to use the correct operators. The alterations should be intuitive though. Because you have to specify specific types in Haskell, but SODA operators like `+` can take a mix of any of the numeric SODA types, the resulting type has to be determined somehow, and right now it returns the same "inner type" as the element to the right of the operator.
 
-##SODA Responses
+## SODA Responses
 
 Using the `getSodaBody` function you can send a query to a SODA dataset and get an `IO` response back which has already been interpreted into the Haskell datatypes that that corresponds to the different SODA types. Using the `getSodaBody` function you can send a query to a SODA dataset and you'll get back a value of type `IO Response`. The `Response` type is a list of `Row`s, and a `Row` is a [(Strict) HashMap](https://hackage.haskell.org/package/unordered-containers-0.2.7.2/docs/Data-HashMap-Strict.html) of `Strings` as keys and `ReturnValue` as values.
 
@@ -81,7 +81,7 @@ You can also use `getStringBody` to get the response from a SODA query call as a
 
 If something goes wrong between the time the query is sent and received, it will throw an `HttpException` as described by the underlying HTTP library [Req](https://hackage.haskell.org/package/req-0.2.0/docs/Network-HTTP-Req.html#t:HttpException).
 
-##Tips
+## Tips
 
 - Since it's somewhat annoying to put type declarations for `Column` values inline, I recommend defining constants for all of the columns that you are going to use in one batch, and then just using those throughout your code.
 
@@ -91,7 +91,7 @@ If something goes wrong between the time the query is sent and received, it will
 
 - Never forget three of the most useful functions in functional programming: map, fold, and filter! If you'd like to do something like create a `MultiPoint` with tuples instead of points, or if you'd like a whole bunch of numbers to be `SodaNum`, then these three functions can make things much more simple and concise.
 
-###Common mistakes
+### Common mistakes
 
 - Don't forget to use `SodaVal` on all values in a query.
 
@@ -101,7 +101,7 @@ If something goes wrong between the time the query is sent and received, it will
 
 - Don't forget to use `Just` on Maybe values like `Query` fields and `Checkbox` values.
 
-##More Examples
+## More Examples
 
 The following example is a bit contrived but it queries a dataset with the URL `https://soda.demo.socrata.com/resource/6yvf-kk3n.json?$select=magnitude, region || ' ' || source as region_and_source&$where=region IS NOT NULL AND source IS NOT NULL AND location IS NOT NULL AND within_circle(location, 63.0, -147.0, 60000.0)&$order=magnitude ASC&$limit=3`
 
